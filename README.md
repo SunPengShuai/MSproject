@@ -1,6 +1,80 @@
 # 秒杀商城
 
 ## 目录结构
+/MSproject
+├── /images                        # 图片资源
+├── /cmd
+│   ├── /user-service              # 用户服务
+│   ├── /order-service             # 订单服务
+│   ├── /product-service           # 商品服务
+│   ├── /stock-service             # 库存服务
+│   ├── /page-service              # 页面基础服务
+│   ├── /gateway-service          # API Gateway (基于 Kong 或自定义)
+├── /internal
+│   ├── /user                      # 用户相关业务逻辑
+│   │   ├── /handler               # HTTP 请求处理器
+│   │   ├── /service               # 业务逻辑服务
+│   │   ├── /repository            # 数据库操作
+│   │   ├── /model                 # 数据模型
+│   │   └── /util                  # 工具函数
+│   ├── /order                     # 订单相关业务逻辑
+│   │   ├── /handler               # HTTP 请求处理器
+│   │   ├── /service               # 业务逻辑服务
+│   │   ├── /repository            # 数据库操作
+│   │   ├── /model                 # 数据模型
+│   │   └── /util                  # 工具函数
+│   ├── /product                   # 商品相关业务逻辑
+│   │   ├── /handler               # HTTP 请求处理器
+│   │   ├── /service               # 业务逻辑服务
+│   │   ├── /repository            # 数据库操作
+│   │   ├── /model                 # 数据模型
+│   │   └── /util                  # 工具函数
+│   ├── /stock                     # 库存相关业务逻辑
+│   │   ├── /handler               # HTTP 请求处理器
+│   │   ├── /service               # 业务逻辑服务
+│   │   ├── /repository            # 数据库操作
+│   │   ├── /model                 # 数据模型
+│   │   └── /util                  # 工具函数
+│   ├── /page                      # 页面基础服务相关业务逻辑
+│   │   ├── /handler               # HTTP 请求处理器
+│   │   ├── /service               # 业务逻辑服务
+│   │   ├── /repository            # 数据库操作
+│   │   ├── /model                 # 数据模型
+│   │   └── /util                  # 工具函数
+│   ├── /common                    # 公共模块，如日志、配置、工具、错误处理等
+│   │   ├── /config                # 配置文件加载
+│   │   ├── /logger                # 日志处理
+│   │   ├── /errors                # 错误处理
+│   │   ├── /metrics               # 监控与度量
+│   │   ├── /middleware            # 中间件（如认证、权限、日志等）
+│   │   └── /util                  # 工具函数
+├── /api
+│   ├── /user                      # 用户服务API定义（Protobuf 或 HTTP）
+│   ├── /order                     # 订单服务API定义（Protobuf 或 HTTP）
+│   ├── /product                   # 商品服务API定义（Protobuf 或 HTTP）
+│   ├── /stock                     # 库存服务API定义（Protobuf 或 HTTP）
+│   ├── /page                      # 页面基础服务API定义（Protobuf 或 HTTP）
+├── /scripts
+│   ├── /migrations                # 数据库迁移脚本
+│   ├── /deploy                    # 部署相关脚本
+│   └── /build                     # 编译与构建脚本
+├── /docker
+│   ├── /user-service.Dockerfile   # 用户服务的 Dockerfile
+│   ├── /order-service.Dockerfile  # 订单服务的 Dockerfile
+│   ├── /product-service.Dockerfile# 商品服务的 Dockerfile
+│   ├── /stock-service.Dockerfile  # 库存服务的 Dockerfile
+│   ├── /gateway-service.Dockerfile# API Gateway 服务的 Dockerfile
+│   └── /docker-compose.yml        # Docker Compose 文件，用于编排各个微服务
+├── /deploy
+│   ├── /k8s                       # Kubernetes 配置文件（Deployment、Service 等）
+│   └── /helm                      # Helm charts 用于简化 Kubernetes 部署
+├── /docs                           # 项目文档（功能、API、架构等）
+├── /test                           # 测试相关代码
+│   ├── /user-service              # 用户服务的测试
+│   ├── /order-service             # 订单服务的测试
+│   ├── /product-service           # 商品服务的测试
+│   └── /common                    # 公共功能的测试
+└── README.md
 
 ## 技术栈一览
  - etcd 服务注册和发现
