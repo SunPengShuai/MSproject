@@ -1,15 +1,13 @@
 # 秒杀商城
 ----
-Tasks
+- Tasks  
+  -[x]  服务注册 
+  -[ ]  编写基于watch机制的服务发现，并动态更新到kong网关
+  -[ ]  使用grpc-gatewy同时提供grpc和http服务
+  -[ ]   
 ----
-- [x]  服务注册
--[ ]  编写基于watch机制的服务发现，并动态更新到kong网关
--[ ]  使用grpc-gatewy同时提供grpc和http服务
--[ ]   
-----
-Problems
-----
--[ ] internal/common/test的服务注册测试仅仅在127.0.0.1:12379下成功，替换成10.4.0.2:2379失败，Why？
+- Problem
+  -[ ] internal/common/test的服务注册测试仅仅在127.0.0.1:12379下成功，替换成10.4.0.2:2379失败，Why？
 
 ## 目录结构
 /MSproject
