@@ -20,7 +20,8 @@ services:
     volumes:
       - ./data:/var/lib/postgresql/data
     networks:
-      - kong-net
+      kong-net:
+        ipv4_address: 172.20.0.2
   kong:
     restart: always
     image: kong:2.5.0-ubuntu
@@ -46,7 +47,8 @@ services:
     depends_on:
       - postgres
     networks:
-      - kong-net
+      kong-net:
+        ipv4_address: 172.20.0.3
     #command: [ "kong", "migrations", "bootstrap" ]
   konga:
     image: albertwzp/konga-arm64:next #开发环境arm64，生产环境用amd64
@@ -56,9 +58,12 @@ services:
     ports:
       - 8080:1337
     networks:
-      - kong-net
+      kong-net:
+        ipv4_address: 172.20.0.4
     depends_on:
       - postgres
 networks:
   kong-net:
-    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24

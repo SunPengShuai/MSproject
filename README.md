@@ -1,15 +1,34 @@
 # 秒杀商城
+----
+Tasks
+----
+- [x]  服务注册
+-[ ]  编写基于watch机制的服务发现，并动态更新到kong网关
+-[ ]  使用grpc-gatewy同时提供grpc和http服务
+-[ ]   
+----
+Problems
+----
+-[ ] internal/common/test的服务注册测试仅仅在127.0.0.1:12379下成功，替换成10.4.0.2:2379失败，Why？
 
 ## 目录结构
 /MSproject
 ├── /images                        # 图片资源
 ├── /cmd
 │   ├── /user-service              # 用户服务
+│   │   └── main.go                # 用户服务的启动入口
 │   ├── /order-service             # 订单服务
+│   │   └── main.go                # 订单服务的启动入口
 │   ├── /product-service           # 商品服务
+│   │   └── main.go                # 商品服务的启动入口
 │   ├── /stock-service             # 库存服务
+│   │   └── main.go                # 库存服务的启动入口
 │   ├── /page-service              # 页面基础服务
-│   ├── /gateway-service          # API Gateway (基于 Kong 或自定义)
+│   │   └── main.go                # 页面服务的启动入口
+│   ├── /gateway-service           # API Gateway (基于 Kong 或自定义)
+│   │   └── main.go                # Gateway 服务的启动入口
+│   ├── /etcd-service              # etcd服务注册发现和配置服务
+│   │   └── main.go                # 页面服务的启动入口
 ├── /internal
 │   ├── /user                      # 用户相关业务逻辑
 │   │   ├── /handler               # HTTP 请求处理器
@@ -41,13 +60,19 @@
 │   │   ├── /repository            # 数据库操作
 │   │   ├── /model                 # 数据模型
 │   │   └── /util                  # 工具函数
-│   ├── /common                    # 公共模块，如日志、配置、工具、错误处理等
+│   ├── /common                    # 公共模块
 │   │   ├── /config                # 配置文件加载
 │   │   ├── /logger                # 日志处理
 │   │   ├── /errors                # 错误处理
 │   │   ├── /metrics               # 监控与度量
 │   │   ├── /middleware            # 中间件（如认证、权限、日志等）
-│   │   └── /util                  # 工具函数
+│   │   ├── /util                  # 工具函数
+│   │   └── /discovery             # etcd 服务注册与发现
+│   │       ├── client.go          # etcd 客户端逻辑
+│   │       ├── registry.go        # 服务注册逻辑
+│   │       ├── discovery.go       # 服务发现逻辑
+│   │       ├── healthcheck.go     # 健康检查逻辑
+│   │       └── README.md          # 模块说明文档
 ├── /api
 │   ├── /user                      # 用户服务API定义（Protobuf 或 HTTP）
 │   ├── /order                     # 订单服务API定义（Protobuf 或 HTTP）
@@ -76,6 +101,7 @@
 │   └── /common                    # 公共功能的测试
 └── README.md
 
+
 ## 技术栈一览
  - etcd 服务注册和发现
  - kong 负载均衡和流量管理
@@ -93,9 +119,8 @@
 ![img.png](images/img.png)
 
 ## 功能实现
-前端技术
-  - vue （商城app实现）
-  - 三剑客 （简单的秒杀前端页面实现）
+前端技术 (单独的项目)
+  - uniapp （商城app实现）
 后端主要实现以下几个微服务模块：
   - 用户信息模块
   - 订单模块
@@ -104,6 +129,9 @@
   - 页面基础服务模块
 
 ## 系统优化策略
+### 微服务调用链导致的缓存雪崩 —— 熔断机制
+
+
 ### 页面静态化
 秒杀商品页面的信息尽量写死，防止多余请求。\
 HTML页面上生成倒计时的时钟，直到 秒杀开始 的时候，页面自动刷新，于此同时后台程序在CDN节点上面 更新了JS文件的内容。\

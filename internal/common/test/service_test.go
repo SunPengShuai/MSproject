@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"google.golang.org/grpc/resolver"
 	"testing"
 	"time"
 )
@@ -50,17 +51,27 @@ func TestServiceDiscovery(t *testing.T) {
 	}
 	defer resolverInstance.Close()
 
-	// 等待服务发现更新
+	// 等待 Discovery 更新地址（根据 watch 实现，可能需要稍作等待）
 	time.Sleep(2 * time.Second)
-	t.Log("Service discovery tested successfully")
+
+	// 验证获取到的地址是否符合预期
+	if len(mockClientConn.state.Addresses) == 0 {
+		t.Fatalf("No addresses discovered for service: %s", serviceName)
+	}
+
+	for _, addr := range mockClientConn.state.Addresses {
+		t.Logf("Discovered address: %s", addr.Addr)
+	}
 }
 
 // mockClientConn 是一个模拟的 gRPC resolver.ClientConn 实现
 type mockClientConn struct {
-	t *testing.T
+	t     *testing.T
+	state resolver.State
 }
 
 func (m *mockClientConn) UpdateState(state resolver.State) error {
+	m.state = state // 保存当前的状态以便测试验证
 	m.t.Logf("Received updated state: %v", state.Addresses)
 	return nil
 }
