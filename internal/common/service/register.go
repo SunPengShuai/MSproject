@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"time"
 )
@@ -39,14 +38,12 @@ func NewService(serviceInfo ServiceInfo, endpoints []string) (service *Service, 
 }
 
 func (s *Service) Start(ctx context.Context) (err error) {
-	fmt.Println("664")
+
 	alive, err := s.KeepAlive(ctx)
 	if err != nil {
 		return
 	}
-	fmt.Println("667")
 	for {
-		fmt.Println("666")
 		select {
 		case err = <-s.stop: // 服务端关闭返回错误
 			return err
@@ -64,13 +61,11 @@ func (s *Service) KeepAlive(ctx context.Context) (<-chan *clientv3.LeaseKeepAliv
 	info := s.ServiceInfo
 	key := s.getKey()
 	val, _ := json.Marshal(info)
-	fmt.Println("granting lease")
 	// 创建租约
 	leaseResp, err := s.client.Grant(ctx, 5)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("put key")
 	// 写入etcd
 	_, err = s.client.Put(ctx, key, string(val), clientv3.WithLease(leaseResp.ID))
 	if err != nil {

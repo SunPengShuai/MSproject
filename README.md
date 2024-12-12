@@ -3,13 +3,14 @@
 Tasks
 ----
 -[x]  服务注册 </br>
--[ ]  编写基于watch机制的服务发现，并动态更新到kong网关
--[ ]  使用grpc-gatewy同时提供grpc和http服务
--[ ]   
+-[ ]  编写基于watch机制的服务发现，并动态更新到kong网关 </br>
+-[ ]  使用grpc-gatewy同时提供grpc和http服务 </br>
+-[ ]  启用kong网关jwt认证插件/自定义jwt认证插件
+-[ ]  编写grpc客户端装饰器，使用common模块中提供的负载均衡、限流等方法
 ----
 Problem
 ----
--[ ] internal/common/test的服务注册测试仅仅在127.0.0.1:12379下成功，替换成10.4.0.2:2379失败，Why？
+-[ ] internal/common/test的服务注册测试仅仅在127.0.0.1:12379下成功，替换成10.4.0.2:2379失败，Why？ </br>
 
 ## 目录结构
 /MSproject
@@ -61,18 +62,16 @@ Problem
 │   │   ├── /model                 # 数据模型
 │   │   └── /util                  # 工具函数
 │   ├── /common                    # 公共模块
+│   │   ├── /test                  # 测试目录
 │   │   ├── /config                # 配置文件加载
 │   │   ├── /logger                # 日志处理
 │   │   ├── /errors                # 错误处理
 │   │   ├── /metrics               # 监控与度量
 │   │   ├── /middleware            # 中间件（如认证、权限、日志等）
 │   │   ├── /util                  # 工具函数
-│   │   └── /discovery             # etcd 服务注册与发现
-│   │       ├── client.go          # etcd 客户端逻辑
-│   │       ├── registry.go        # 服务注册逻辑
+│   │   └── /service               # etcd 服务注册与发现
+│   │       ├── register.go        # 服务注册逻辑
 │   │       ├── discovery.go       # 服务发现逻辑
-│   │       ├── healthcheck.go     # 健康检查逻辑
-│   │       └── README.md          # 模块说明文档
 ├── /api
 │   ├── /user                      # 用户服务API定义（Protobuf 或 HTTP）
 │   ├── /order                     # 订单服务API定义（Protobuf 或 HTTP）

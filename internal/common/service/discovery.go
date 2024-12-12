@@ -2,107 +2,98 @@ package service
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"go.etcd.io/etcd/api/v3/mvccpb"
-	clientv3 "go.etcd.io/etcd/client/v3"
-	"google.golang.org/grpc/resolver"
+	"go.etcd.io/etcd/client/v3"
+	"log"
+	"sync"
+	"time"
 )
 
-type Discovery struct {
-	endpoints  []string
-	service    string
-	client     *clientv3.Client
-	clientConn resolver.ClientConn
+// ServiceDiscovery 服务发现
+type ServiceDiscovery struct {
+	cli        *clientv3.Client  // etcd client
+	serverList map[string]string // 服务列表
+	lock       sync.RWMutex
 }
 
-func NewDiscovery(endpoints []string, service string) resolver.Builder {
-	return &Discovery{
-		endpoints: endpoints,
-		service:   service,
-	}
-}
-
-func (d *Discovery) ResolveNow(rn resolver.ResolveNowOptions) {
-
-}
-
-func (d *Discovery) Close() {
-
-}
-
-func (d *Discovery) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOptions) (resolver.Resolver, error) {
-	var err error
-	d.client, err = clientv3.New(clientv3.Config{
-		Endpoints: d.endpoints,
+// NewServiceDiscovery 新建服务发现
+func NewServiceDiscovery(endpoints []string) *ServiceDiscovery {
+	// 初始化etcd client
+	cli, err := clientv3.New(clientv3.Config{
+		Endpoints:   endpoints,
+		DialTimeout: time.Duration(5) * time.Second,
 	})
 	if err != nil {
-		return nil, err
+		log.Fatalln(err)
 	}
 
-	d.clientConn = cc
-
-	go d.watch(d.service)
-
-	return d, nil
-}
-
-func (d *Discovery) Scheme() string {
-	return "etcd"
-}
-
-func (d *Discovery) watch(service string) {
-	addrM := make(map[string]resolver.Address)
-	state := resolver.State{}
-
-	update := func() {
-		addrList := make([]resolver.Address, 0, len(addrM))
-		for _, address := range addrM {
-			addrList = append(addrList, address)
-		}
-		state.Addresses = addrList
-		err := d.clientConn.UpdateState(state)
-		if err != nil {
-			fmt.Println("更新地址出错：", err)
-		}
+	return &ServiceDiscovery{
+		cli:        cli,
+		serverList: make(map[string]string),
 	}
-	resp, err := d.client.Get(context.Background(), service, clientv3.WithPrefix())
+}
+
+// WatchService 初始化服务列表和监视
+func (s *ServiceDiscovery) WatchService(prefix string) error {
+	// 根据前缀获取现有的key
+	resp, err := s.cli.Get(context.Background(), prefix, clientv3.WithPrefix())
 	if err != nil {
-		fmt.Println("获取地址出错：", err)
-	} else {
-		for i, kv := range resp.Kvs {
-			info := &ServiceInfo{}
-			err = json.Unmarshal(kv.Value, info)
-			if err != nil {
-				fmt.Println("解析value失败：", err)
-			}
-			addrM[string(resp.Kvs[i].Key)] = resolver.Address{
-				Addr:       info.Ip,
-				ServerName: info.Name,
+		return err
+	}
+
+	// 遍历获取得到的k和v
+	for _, ev := range resp.Kvs {
+		s.SetServiceList(string(ev.Key), string(ev.Value))
+	}
+
+	// 监视前缀，修改变更server
+	go s.watcher(prefix)
+	return nil
+}
+
+// watcher 监听Key的前缀
+func (s *ServiceDiscovery) watcher(prefix string) {
+	rch := s.cli.Watch(context.Background(), prefix, clientv3.WithPrefix())
+	log.Printf("watching prefix:%s now...", prefix)
+	for wresp := range rch {
+		for _, ev := range wresp.Events {
+			switch ev.Type {
+			case mvccpb.PUT: // 修改或者新增
+				s.SetServiceList(string(ev.Kv.Key), string(ev.Kv.Value))
+			case mvccpb.DELETE: // 删除
+				s.DelServiceList(string(ev.Kv.Key))
 			}
 		}
 	}
+}
 
-	update()
+func (s *ServiceDiscovery) SetServiceList(key, val string) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.serverList[key] = string(val)
+	log.Println("put key:", key, "val:", val)
+}
 
-	dch := d.client.Watch(context.Background(), service, clientv3.WithPrefix(), clientv3.WithPrevKV())
-	for response := range dch {
-		for _, event := range response.Events {
-			switch event.Type {
-			case mvccpb.PUT:
-				info := &ServiceInfo{}
-				err = json.Unmarshal(event.Kv.Value, info)
-				if err != nil {
-					fmt.Println("监听时解析value报错：", err)
-				} else {
-					addrM[string(event.Kv.Key)] = resolver.Address{Addr: info.Ip}
-				}
-				fmt.Println(string(event.Kv.Key))
-			case mvccpb.DELETE:
-				delete(addrM, string(event.Kv.Key))
-				fmt.Println(string(event.Kv.Key))
-			}
-		}
-		update()
+func (s *ServiceDiscovery) DelServiceList(key string) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	delete(s.serverList, key)
+	log.Println("Del key :", key)
+}
+
+// GetServices 获取服务地址
+func (s *ServiceDiscovery) GetServices() []string {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	addrs := make([]string, 0, len(s.serverList))
+
+	for _, v := range s.serverList {
+		addrs = append(addrs, v)
 	}
+	return addrs
+}
+
+// Close 关闭服务
+func (s *ServiceDiscovery) Close() error {
+	return s.cli.Close()
 }
