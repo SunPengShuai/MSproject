@@ -1,0 +1,11 @@
+syntax = "proto3";
+package pb;
+option go_package = "./pb";
+message TestMsg {
+  string msg = 1;
+  int32  status = 2;
+}
+message Empty{}
+service checkStatus{
+  rpc getStatus(Empty) returns(TestMsg);
+}
