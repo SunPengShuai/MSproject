@@ -12,8 +12,8 @@ import (
 import ss "service"
 
 func TestServiceRegister(t *testing.T) {
-	//var endpoints = []string{"127.0.0.1:12379", "127.0.0.1:22379", "127.0.0.1:32379"}
-	var endpoints = []string{"10.4.0.2:2379"}
+	var endpoints = []string{"127.0.0.1:12379", "127.0.0.1:22379", "127.0.0.1:32379"}
+	//var endpoints = []string{"10.4.0.2:2379"}
 	serviceInfo := ss.ServiceInfo{
 		Name: "test",
 		Ip:   "127.0.0.1",

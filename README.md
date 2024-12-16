@@ -4,14 +4,17 @@ Tasks
 ----
 -[x]  服务注册 </br>
 -[ ]  编写基于watch机制的服务发现，并动态更新到kong网关 </br>
--[ ]  使用grpc-gatewy同时提供grpc和http服务 </br>
+-[x]  使用grpc-gatewy同时提供grpc和http服务 </br>
 -[ ]  启用kong网关jwt认证插件/自定义jwt认证插件
 -[ ]  编写grpc客户端装饰器，使用common模块中提供的负载均衡、限流等方法
 ----
 Problem
 ----
 -[ ] internal/common/test的服务注册测试仅仅在127.0.0.1:12379下成功，替换成10.4.0.2:2379失败，Why？ </br>
-
+----
+Idea
+----
+-[ ] 通过将秒杀活动的kong routes中的Regex_priority 设置高一些提高秒杀体验
 ## 目录结构
 /MSproject
 ├── /images                        # 图片资源

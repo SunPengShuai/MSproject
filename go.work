@@ -1,0 +1,6 @@
+go 1.22
+
+use cmd/test-service
+use internal/common/service
+use internal/common/test
+use internal/common/kongApi
