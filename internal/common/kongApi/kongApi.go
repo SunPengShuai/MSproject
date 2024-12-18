@@ -140,36 +140,6 @@ func CreateRoute(name, serviceID string, paths []string) error {
 	return nil
 }
 
-// 更新 Route
-func UpdateRoute(name, serviceID string, paths []string) error {
-	route := Route{
-		Name:  name,
-		Paths: paths,
-	}
-	route.Service.ID = serviceID // 绑定服务的 ID
-
-	data, _ := json.Marshal(route)
-
-	req, err := http.NewRequest(http.MethodPatch, KongAdminURL+"/routes/"+name, bytes.NewBuffer(data))
-	if err != nil {
-		return fmt.Errorf("failed to create update request: %v", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("failed to update route: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := ioutil.ReadAll(resp.Body)
-		return fmt.Errorf("failed to update route: %s", body)
-	}
-	fmt.Println("Route updated successfully!")
-	return nil
-}
-
 // 检查 Target 是否存在
 func TargetExists(upstreamName, target string) (bool, error) {
 	resp, err := http.Get(KongAdminURL + "/upstreams/" + upstreamName + "/targets")
@@ -229,4 +199,31 @@ func ResourceExists(resourcePath string) (bool, error) {
 		return false, fmt.Errorf("error checking resource: %s", body)
 	}
 	return true, nil
+}
+
+func GetServiceID(serviceName string) (string, error) {
+	// 构造请求 URL
+	url := fmt.Sprintf(KongAdminURL+"/services/%s", serviceName)
+
+	// 发送 HTTP GET 请求
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// 检查 HTTP 状态码
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	// 读取响应体
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response body: %w", err)
+	}
+	res := map[string]interface{}{}
+	json.Unmarshal(body, &res)
+
+	return res["id"].(string), nil
 }

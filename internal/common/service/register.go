@@ -9,6 +9,7 @@ import (
 )
 
 type ServiceInfo struct {
+	Id       string
 	Name     string
 	Ip       string
 	Port     int

@@ -17,6 +17,7 @@ import (
 type TestService struct {
 	pb.UnimplementedCheckStatusServer
 	ss.ServiceInfo
+	Name string
 }
 
 func (t *TestService) GetStatus(ctx context.Context, empty *pb.Empty) (*pb.TestMsg, error) {
@@ -35,6 +36,7 @@ func main() {
 			Name:     "test",
 			HttpPort: 8888, //http服务端口
 		},
+		Name: "testService1",
 	}
 	// 启动 grpc 服务
 	lis, err := net.Listen("tcp", testService.Ip+":"+strconv.Itoa(testService.Port))
@@ -93,15 +95,13 @@ func main() {
 	log.Println("Service registered successfully")
 
 	// 注册服务到 Kong
-	upstreamName := "test"
-	serviceName := "test-service"
 	routeName := "test-route"
 	target := gwServer.Addr
 	weight := 100
 	paths := []string{"/service/test"}
 
 	// 创建 Upstream
-	upstreamExists, err := k.UpstreamExists(upstreamName)
+	upstreamExists, err := k.UpstreamExists(testService.ServiceInfo.Name)
 	if err != nil {
 		log.Fatalf("Error checking upstream: %v", err)
 	}
@@ -109,25 +109,25 @@ func main() {
 		log.Println("Upstream already exists, updating if needed...")
 	} else {
 		log.Println("Upstream does not exist, creating...")
-		if err := k.CreateUpstream(upstreamName); err != nil {
+		if err := k.CreateUpstream(testService.ServiceInfo.Name); err != nil {
 			log.Fatalf("Error creating upstream: %v", err)
 		}
 	}
 
 	// 创建 Target
-	targetExists, err := k.TargetExists(upstreamName, target)
+	targetExists, err := k.TargetExists(testService.ServiceInfo.Name, target)
 	if err != nil {
 		log.Fatalf("Error checking target: %v", err)
 	}
 	if !targetExists {
 		log.Println("Target does not exist, adding...")
-		if err := k.AddTargetToUpstream(upstreamName, target, weight); err != nil {
+		if err := k.AddTargetToUpstream(testService.ServiceInfo.Name, target, weight); err != nil {
 			log.Fatalf("Error adding target: %v", err)
 		}
 	}
 
 	// 创建 Service
-	serviceExists, err := k.ServiceExists(serviceName)
+	serviceExists, err := k.ServiceExists(testService.ServiceInfo.Name)
 	if err != nil {
 		log.Fatalf("Error checking service: %v", err)
 	}
@@ -136,10 +136,20 @@ func main() {
 		log.Println("Service already exists, updating if needed...")
 	} else {
 		log.Println("Service does not exist, creating...")
-		if _, err := k.CreateService(serviceName, upstreamName, "http", "/test"); err != nil {
+		sid, err := k.CreateService(testService.Name, testService.ServiceInfo.Name, "http", "/test")
+		if err != nil {
 			log.Fatalf("Error creating service: %v", err)
 		}
+		testService.ServiceInfo.Id = sid
 	}
+	if testService.ServiceInfo.Id == "" {
+		sid, err := k.GetServiceID(testService.ServiceInfo.Name)
+		if err != nil {
+			log.Fatalf("Error getting service ID: %v", err)
+		}
+		testService.ServiceInfo.Id = sid
+	}
+
 	// 创建 Route
 	routeExists, err := k.RouteExists(routeName)
 	if err != nil {
@@ -149,7 +159,7 @@ func main() {
 		log.Println("Route already exists, updating if needed...")
 	} else {
 		log.Println("Route does not exist, creating...")
-		if err := k.CreateRoute(routeName, serviceName, paths); err != nil {
+		if err := k.CreateRoute(routeName, testService.ServiceInfo.Id, paths); err != nil {
 			log.Fatalf("Error creating route: %v", err)
 		}
 	}

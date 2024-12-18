@@ -42,3 +42,11 @@ func TestKongApi(t *testing.T) {
 
 	fmt.Println("Service and Route successfully registered!")
 }
+
+func TestGetServiceID(t *testing.T) {
+	res, err := k.GetServiceID("test")
+	if err != nil {
+		t.Fatalf("Error getting service ID: %v", err)
+	}
+	fmt.Println(res)
+}
