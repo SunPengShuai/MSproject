@@ -9,9 +9,10 @@ import (
 )
 
 type ServiceInfo struct {
-	Name string
-	Ip   string
-	Port int
+	Name     string
+	Ip       string
+	Port     int
+	HttpPort int
 }
 
 type Service struct {
@@ -21,7 +22,7 @@ type Service struct {
 	client      *clientv3.Client
 }
 
-func NewService(serviceInfo ServiceInfo, endpoints []string) (service *Service, err error) {
+func RegisterService(serviceInfo ServiceInfo, endpoints []string) (service *Service, err error) {
 	client, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,
 		DialTimeout: time.Second * 10,
@@ -37,7 +38,7 @@ func NewService(serviceInfo ServiceInfo, endpoints []string) (service *Service, 
 	return
 }
 
-func (s *Service) Start(ctx context.Context) (err error) {
+func (s *Service) StartCheckAlive(ctx context.Context) (err error) {
 
 	alive, err := s.KeepAlive(ctx)
 	if err != nil {

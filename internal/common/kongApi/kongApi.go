@@ -36,7 +36,9 @@ type Service struct {
 type Route struct {
 	Name    string   `json:"name"`
 	Paths   []string `json:"paths"`
-	Service string   `json:"service"`
+	Service struct {
+		ID string `json:"id"`
+	} `json:"service"`
 }
 
 // 创建 Upstream
@@ -80,40 +82,25 @@ func AddTargetToUpstream(upstreamName, target string, weight int) error {
 	return nil
 }
 
-// 创建 Service
-func CreateService(name, hostName, protocol string) error {
+// 创建 Service 并返回服务 ID
+func CreateService(name, hostName, protocol, path string) (string, error) {
 	service := Service{
 		Name:     name,
-		Host:     hostName, // Service 指向 Host/Upstream
-		Protocol: protocol, // 根据需求选择 http/https
+		Host:     hostName,
+		Protocol: protocol,
+		Path:     path,
 	}
 	data, _ := json.Marshal(service)
 
 	resp, err := http.Post(KongAdminURL+"/services", "application/json", bytes.NewBuffer(data))
 	if err != nil {
-		return fmt.Errorf("failed to create service: %v", err)
+		return "", fmt.Errorf("failed to create service: %v", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
 		body, _ := ioutil.ReadAll(resp.Body)
-		return fmt.Errorf("failed to create service: %s", body)
-	}
-	fmt.Println("Service created successfully!")
-	return nil
-}
-
-// GetServiceIDByName 根据服务名称获取服务的 ID
-func GetServiceIDByName(serviceName string) (string, error) {
-	resp, err := http.Get(KongAdminURL + "/services/" + serviceName)
-	if err != nil {
-		return "", fmt.Errorf("failed to get service: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := ioutil.ReadAll(resp.Body)
-		return "", fmt.Errorf("failed to get service: %s", body)
+		return "", fmt.Errorf("failed to create service: %s", body)
 	}
 
 	var serviceData map[string]interface{}
@@ -122,26 +109,21 @@ func GetServiceIDByName(serviceName string) (string, error) {
 		return "", fmt.Errorf("failed to unmarshal service data: %v", err)
 	}
 
-	// 返回 service.id
 	if serviceID, ok := serviceData["id"].(string); ok {
+		fmt.Println("Service created successfully with ID:", serviceID)
 		return serviceID, nil
 	}
 	return "", fmt.Errorf("service ID not found")
 }
 
 // 创建 Route
-func CreateRoute(name, serviceName string, paths []string) error {
-	// 获取服务的 ID
-	serviceID, err := GetServiceIDByName(serviceName)
-	if err != nil {
-		return fmt.Errorf("failed to get service ID: %v", err)
-	}
-
+func CreateRoute(name, serviceID string, paths []string) error {
 	route := Route{
-		Name:    name,
-		Paths:   paths,
-		Service: serviceID, // 使用服务 ID
+		Name:  name,
+		Paths: paths,
 	}
+	route.Service.ID = serviceID // 绑定服务的 ID
+
 	data, _ := json.Marshal(route)
 
 	resp, err := http.Post(KongAdminURL+"/routes", "application/json", bytes.NewBuffer(data))
@@ -156,4 +138,95 @@ func CreateRoute(name, serviceName string, paths []string) error {
 	}
 	fmt.Println("Route created successfully!")
 	return nil
+}
+
+// 更新 Route
+func UpdateRoute(name, serviceID string, paths []string) error {
+	route := Route{
+		Name:  name,
+		Paths: paths,
+	}
+	route.Service.ID = serviceID // 绑定服务的 ID
+
+	data, _ := json.Marshal(route)
+
+	req, err := http.NewRequest(http.MethodPatch, KongAdminURL+"/routes/"+name, bytes.NewBuffer(data))
+	if err != nil {
+		return fmt.Errorf("failed to create update request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to update route: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		return fmt.Errorf("failed to update route: %s", body)
+	}
+	fmt.Println("Route updated successfully!")
+	return nil
+}
+
+// 检查 Target 是否存在
+func TargetExists(upstreamName, target string) (bool, error) {
+	resp, err := http.Get(KongAdminURL + "/upstreams/" + upstreamName + "/targets")
+	if err != nil {
+		return false, fmt.Errorf("failed to check target: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		return false, fmt.Errorf("failed to check target: %s", body)
+	}
+
+	var data map[string]interface{}
+	body, _ := ioutil.ReadAll(resp.Body)
+	if err := json.Unmarshal(body, &data); err != nil {
+		return false, fmt.Errorf("failed to unmarshal target data: %v", err)
+	}
+
+	if targets, ok := data["data"].([]interface{}); ok {
+		for _, t := range targets {
+			if targetInfo, ok := t.(map[string]interface{}); ok {
+				if targetInfo["target"] == target {
+					return true, nil
+				}
+			}
+		}
+	}
+	return false, nil
+}
+
+// 检查 Upstream 是否存在
+func UpstreamExists(name string) (bool, error) {
+	return ResourceExists("/upstreams/" + name)
+}
+
+// 检查 Route 是否存在
+func RouteExists(name string) (bool, error) {
+	return ResourceExists("/routes/" + name)
+}
+
+// 示例：调用通用方法检查 Service 是否存在
+func ServiceExists(name string) (bool, error) {
+	return ResourceExists("/services/" + name)
+}
+func ResourceExists(resourcePath string) (bool, error) {
+	resp, err := http.Get(KongAdminURL + resourcePath)
+	if err != nil {
+		return false, fmt.Errorf("failed to check resource: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return false, nil
+	} else if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		return false, fmt.Errorf("error checking resource: %s", body)
+	}
+	return true, nil
 }

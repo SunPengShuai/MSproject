@@ -15,7 +15,7 @@ message TestMsg {
 service checkStatus{
   rpc getStatus(Empty) returns(TestMsg){
     option(google.api.http) = {
-      get: "/test"
+      get: "/test",
     };
   }
 }

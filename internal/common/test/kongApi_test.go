@@ -30,19 +30,13 @@ func TestKongApi(t *testing.T) {
 	}
 
 	// 创建 Service
-	if err := k.CreateService(serviceName, upstreamName, "http"); err != nil {
+	sid, err := k.CreateService(serviceName, upstreamName, "http", "/")
+	if err != nil {
 		t.Fatalf("Error creating service: %v", err)
 	}
 
-	// 获取服务 ID，确保获取正确的 service.id
-	serviceID, err := k.GetServiceIDByName(serviceName)
-	t.Log("serviceID:", serviceID)
-	if err != nil {
-		t.Fatalf("Error getting service ID: %v", err)
-	}
-
 	// 创建 Route
-	if err := k.CreateRoute(routeName, serviceID, paths); err != nil {
+	if err := k.CreateRoute(routeName, sid, paths); err != nil {
 		t.Fatalf("Error creating route: %v", err)
 	}
 

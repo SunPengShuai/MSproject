@@ -19,11 +19,11 @@ func TestServiceRegister(t *testing.T) {
 		Ip:   "127.0.0.1",
 		Port: 8080,
 	}
-	sev, err := ss.NewService(serviceInfo, endpoints)
+	sev, err := ss.RegisterService(serviceInfo, endpoints)
 	if err != nil {
 		t.Error(err)
 	}
-	go sev.Start(context.Background())
+	go sev.StartCheckAlive(context.Background())
 	t.Log("register service success")
 	//select {}
 	sev.Revoke(context.Background())
