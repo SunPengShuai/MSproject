@@ -31,7 +31,7 @@ func main() {
 	testService := TestService{
 		ServiceInfo: ss.ServiceInfo{
 			Ip:       "10.211.55.2",
-			Port:     11234, //grpc服务端口
+			Port:     11235, //grpc服务端口
 			Name:     "test",
 			HttpPort: 8888, //http服务端口
 		},
