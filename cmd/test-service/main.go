@@ -16,8 +16,7 @@ import (
 
 type TestService struct {
 	pb.UnimplementedCheckStatusServer
-	ss.ServiceInfo
-	TargetName string
+	ss.Service
 }
 
 func (t *TestService) GetStatus(ctx context.Context, empty *pb.Empty) (*pb.TestMsg, error) {
@@ -30,16 +29,18 @@ func (t *TestService) GetStatus(ctx context.Context, empty *pb.Empty) (*pb.TestM
 func main() {
 	// 定义服务基本信息
 	testService := TestService{
-		ServiceInfo: ss.ServiceInfo{
-			Ip:       "10.211.55.2", //服务运行的IP地址
-			Port:     11236,         //grpc服务端口
-			Name:     "test",        //Service和Upstream的名称
-			HttpPort: 8889,          //http服务端口
+		Service: ss.Service{
+			ServiceInfo: ss.ServiceInfo{
+				Ip:       "10.211.55.2", //服务运行的IP地址
+				Port:     11236,         //grpc服务端口
+				Name:     "test",        //Service和Upstream的名称
+				HttpPort: 8889,          //http服务端口
+			},
 		},
-		TargetName: "testService1", //target的名称
 	}
+
 	// 启动 grpc 服务
-	lis, err := net.Listen("tcp", testService.Ip+":"+strconv.Itoa(testService.Port))
+	lis, err := net.Listen("tcp", testService.ServiceInfo.Ip+":"+strconv.Itoa(testService.ServiceInfo.Port))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -52,10 +53,10 @@ func main() {
 			log.Fatal(err)
 		}
 	}()
-	log.Println("gRPC server is running on port " + strconv.Itoa(testService.Port))
+	log.Println("gRPC server is running on port " + strconv.Itoa(testService.ServiceInfo.Port))
 
 	// 启动 gRPC-Gateway
-	conn, err := grpc.Dial(testService.Ip+":"+strconv.Itoa(testService.Port), grpc.WithInsecure())
+	conn, err := grpc.Dial(testService.ServiceInfo.Ip+":"+strconv.Itoa(testService.ServiceInfo.Port), grpc.WithInsecure())
 	if err != nil {
 		log.Fatalln("Failed to dial server:", err)
 	}
@@ -68,7 +69,7 @@ func main() {
 	}
 
 	gwServer := &http.Server{
-		Addr:    testService.Ip + ":" + strconv.Itoa(testService.HttpPort),
+		Addr:    testService.ServiceInfo.Ip + ":" + strconv.Itoa(testService.ServiceInfo.HttpPort),
 		Handler: gwmux,
 	}
 

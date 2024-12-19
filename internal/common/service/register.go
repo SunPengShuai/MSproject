@@ -9,11 +9,11 @@ import (
 )
 
 type ServiceInfo struct {
-	Id       string
-	Name     string
-	Ip       string
-	Port     int
-	HttpPort int
+	Id       string //服务运行的ID
+	Name     string //服务运行的名称
+	Ip       string //服务运行的IP
+	Port     int    //服务运行的端口
+	HttpPort int    //服务运行的http端口
 }
 
 type Service struct {
