@@ -17,7 +17,7 @@ import (
 type TestService struct {
 	pb.UnimplementedCheckStatusServer
 	ss.ServiceInfo
-	Name string
+	TargetName string
 }
 
 func (t *TestService) GetStatus(ctx context.Context, empty *pb.Empty) (*pb.TestMsg, error) {
@@ -31,12 +31,12 @@ func main() {
 	// 定义服务基本信息
 	testService := TestService{
 		ServiceInfo: ss.ServiceInfo{
-			Ip:       "10.211.55.2",
-			Port:     11235, //grpc服务端口
-			Name:     "test",
-			HttpPort: 8888, //http服务端口
+			Ip:       "10.211.55.2", //服务运行的IP地址
+			Port:     11236,         //grpc服务端口
+			Name:     "test",        //Service和Upstream的名称
+			HttpPort: 8889,          //http服务端口
 		},
-		Name: "testService1",
+		TargetName: "testService1", //target的名称
 	}
 	// 启动 grpc 服务
 	lis, err := net.Listen("tcp", testService.Ip+":"+strconv.Itoa(testService.Port))
@@ -134,18 +134,16 @@ func main() {
 
 	if serviceExists {
 		log.Println("Service already exists, updating if needed...")
-	} else {
-		log.Println("Service does not exist, creating...")
-		sid, err := k.CreateService(testService.Name, testService.ServiceInfo.Name, "http", "/test")
-		if err != nil {
-			log.Fatalf("Error creating service: %v", err)
-		}
-		testService.ServiceInfo.Id = sid
-	}
-	if testService.ServiceInfo.Id == "" {
 		sid, err := k.GetServiceID(testService.ServiceInfo.Name)
 		if err != nil {
 			log.Fatalf("Error getting service ID: %v", err)
+		}
+		testService.ServiceInfo.Id = sid
+	} else {
+		log.Println("Service does not exist, creating...")
+		sid, err := k.CreateService(testService.ServiceInfo.Name, testService.ServiceInfo.Name, "http", "/test")
+		if err != nil {
+			log.Fatalf("Error creating service: %v", err)
 		}
 		testService.ServiceInfo.Id = sid
 	}

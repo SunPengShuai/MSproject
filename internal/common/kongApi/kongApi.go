@@ -61,9 +61,9 @@ func CreateUpstream(name string) error {
 }
 
 // 添加 Target 到 Upstream
-func AddTargetToUpstream(upstreamName, target string, weight int) error {
+func AddTargetToUpstream(upstreamName, targetEndPoint string, weight int) error {
 	targetData := Target{
-		Target: target,
+		Target: targetEndPoint,
 		Weight: weight,
 	}
 	data, _ := json.Marshal(targetData)
