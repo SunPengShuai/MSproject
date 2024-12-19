@@ -6,11 +6,13 @@ Tasks
 -[x]  编写基于watch机制的服务发现，并动态更新到kong网关 </br>
 -[x]  使用grpc-gatewy同时提供grpc和http服务 </br>
 -[x]  在common/register下编写自动发现可用IP和Port的函数FindAvailableEndpoint(numOfIp,numOfPort int)([]string,[]int,error)
+-[ ]  实现target的健康检查（主动和被动）
 -[ ]  定义通用服务启动接口，实现服务启动流程的统一规范
 -[ ]  实现微服务配置中心（基于etcd）相关函数（配置监听、程序热更新、配置写入），并将此方法在
 -[ ]  启用kong网关jwt认证插件/自定义jwt认证插件
 -[ ]  编写grpc客户端装饰器，使用common模块中提供的负载均衡、限流等方法
 -[ ]  秒杀核心方法 
+-[ ]  编写一件启动部署脚本start_by_docker.sh
 ----
 Problem
 ----
@@ -19,6 +21,14 @@ Problem
 Idea
 ----
 -[ ] 通过将秒杀活动的kong routes中的Regex_priority 设置高一些提高秒杀体验
+## 项目启动
+   ### A. 通过Docker部署
+Mac\linux 下通过执行
+```bash
+sh ./start_by_docker.sh
+```
+   ### B. 通过K8s部署
+
 ## 目录结构
 /MSproject
 ├── /images                        # 图片资源
@@ -32,10 +42,6 @@ Idea
 │   ├── /stock-service             # 库存服务
 │   │   └── main.go                # 库存服务的启动入口
 │   ├── /page-service              # 页面基础服务
-│   │   └── main.go                # 页面服务的启动入口
-│   ├── /gateway-service           # API Gateway (基于 Kong 或自定义)
-│   │   └── main.go                # Gateway 服务的启动入口
-│   ├── /etcd-service              # etcd服务注册发现和配置服务
 │   │   └── main.go                # 页面服务的启动入口
 ├── /internal
 │   ├── /user                      # 用户相关业务逻辑
@@ -98,14 +104,13 @@ Idea
 │   └── /docker-compose.yml        # Docker Compose 文件，用于编排各个微服务
 ├── /deploy
 │   ├── /k8s                       # Kubernetes 配置文件（Deployment、Service 等）
-│   └── /helm                      # Helm charts 用于简化 Kubernetes 部署
-├── /docs                           # 项目文档（功能、API、架构等）
+│   └── /helm                      # Helm charts 用于简化 Kubernetes 部署 
 ├── /test                           # 测试相关代码
 │   ├── /user-service              # 用户服务的测试
 │   ├── /order-service             # 订单服务的测试
 │   ├── /product-service           # 商品服务的测试
 │   └── /common                    # 公共功能的测试
-└── README.md
+└── README.md                      # 项目文档（功能、API、架构等）
 
 
 ## 技术栈一览
