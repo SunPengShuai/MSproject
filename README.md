@@ -5,7 +5,7 @@ Tasks
 -[x]  服务注册 </br>
 -[x]  编写基于watch机制的服务发现，并动态更新到kong网关 </br>
 -[x]  使用grpc-gatewy同时提供grpc和http服务 </br>
--[ ]  在common/register下编写自动发现可用IP和Port的函数FindAvailableEndpoint(numOfIp,numOfPort int)([]string,[]int,error)
+-[x]  在common/register下编写自动发现可用IP和Port的函数FindAvailableEndpoint(numOfIp,numOfPort int)([]string,[]int,error)
 -[ ]  定义通用服务启动接口，实现服务启动流程的统一规范
  - -[ ] 
  - -[ ]

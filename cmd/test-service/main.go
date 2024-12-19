@@ -27,14 +27,18 @@ func (t *TestService) GetStatus(ctx context.Context, empty *pb.Empty) (*pb.TestM
 }
 
 func main() {
+	ips, ports, err := ss.FindAvailableEndpoint(1, 2)
+	if err != nil {
+		log.Fatal("FindAvailableEndpoint err:", err)
+	}
 	// 定义服务基本信息
 	testService := TestService{
 		Service: ss.Service{
 			ServiceInfo: ss.ServiceInfo{
-				Ip:       "10.211.55.2", //服务运行的IP地址
-				Port:     11236,         //grpc服务端口
-				Name:     "test",        //Service和Upstream的名称
-				HttpPort: 8889,          //http服务端口
+				Ip:       ips[0],   //服务运行的IP地址
+				Port:     ports[0], //grpc服务端口
+				Name:     "test",   //Service和Upstream的名称
+				HttpPort: ports[1], //http服务端口
 			},
 		},
 	}
