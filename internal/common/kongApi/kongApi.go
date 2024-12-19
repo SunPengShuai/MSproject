@@ -37,8 +37,8 @@ type HealthyStatus struct {
 
 // Upstream 结构
 type Upstream struct {
-	Name         string       `json:"name"`
-	HealthChecks HealthChecks `json:"health_checks"`
+	Name string `json:"name"`
+	// HealthChecks HealthChecks `json:"health_checks"`
 }
 
 // Target 结构
