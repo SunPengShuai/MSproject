@@ -7,10 +7,10 @@ Tasks
 -[x]  使用grpc-gatewy同时提供grpc和http服务 </br>
 -[x]  在common/register下编写自动发现可用IP和Port的函数FindAvailableEndpoint(numOfIp,numOfPort int)([]string,[]int,error)
 -[ ]  定义通用服务启动接口，实现服务启动流程的统一规范
- - -[ ] 
- - -[ ]
+-[ ]  实现微服务配置中心（基于etcd）相关函数（配置监听、程序热更新、配置写入），并将此方法在
 -[ ]  启用kong网关jwt认证插件/自定义jwt认证插件
 -[ ]  编写grpc客户端装饰器，使用common模块中提供的负载均衡、限流等方法
+-[ ]  秒杀核心方法 
 ----
 Problem
 ----

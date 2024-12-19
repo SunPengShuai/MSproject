@@ -35,7 +35,7 @@ func TestServiceDiscovery(t *testing.T) {
 	ser := ss.NewServiceDiscovery(endpoints)
 	defer ser.Close()
 
-	err := ser.WatchService("test")
+	err := ser.WatchService("/services/")
 	if err != nil {
 		log.Fatal(err)
 	}

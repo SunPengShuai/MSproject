@@ -10,7 +10,30 @@
   "produces": [
     "application/json"
   ],
-  "paths": {},
+  "paths": {
+    "/test": {
+      "get": {
+        "operationId": "checkStatus_getStatus",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbTestMsg"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/runtimeError"
+            }
+          }
+        },
+        "tags": [
+          "checkStatus"
+        ]
+      }
+    }
+  },
   "definitions": {
     "pbTestMsg": {
       "type": "object",

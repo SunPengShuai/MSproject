@@ -107,5 +107,5 @@ func (s *Service) Revoke(ctx context.Context) error {
 }
 
 func (s *Service) getKey() string {
-	return s.ServiceInfo.Name
+	return "/services/" + s.ServiceInfo.Name
 }

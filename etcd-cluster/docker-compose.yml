@@ -78,10 +78,12 @@ services:
       - "38080:8080"
     #environment:
     # ETCD keeper 不需要额外的配置，直接通过 WEB 界面连接 ETCD 集群
+    restart: always
     command:
       - -h=0.0.0.0
       - -p=8080
       - -skiptls
+      - -e=http://10.4.0.2:2379,http://10.4.0.3:2379,http://10.4.0.4:2379
 
 # 网络配置
 networks:

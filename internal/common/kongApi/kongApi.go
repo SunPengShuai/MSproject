@@ -10,9 +10,35 @@ import (
 
 const KongAdminURL = "http://localhost:8001"
 
+// 为UpStream结构添加健康检查
+type HealthChecks struct {
+	Active  ActiveHealthCheck  `json:"active"`
+	Passive PassiveHealthCheck `json:"passive"`
+}
+
+// 主动健康检查
+type ActiveHealthCheck struct {
+	HTTPPath  string        `json:"http_path"`
+	Type      string        `json:"type"`
+	Healthy   HealthyStatus `json:"healthy"`
+	Unhealthy HealthyStatus `json:"unhealthy"`
+}
+
+// 被动健康检查
+type PassiveHealthCheck struct {
+	Healthy   HealthyStatus `json:"healthy"`
+	Unhealthy HealthyStatus `json:"unhealthy"`
+}
+
+type HealthyStatus struct {
+	HTTPStatuses []int `json:"http_statuses"`
+	Interval     int   `json:"interval"`
+}
+
 // Upstream 结构
 type Upstream struct {
-	Name string `json:"name"`
+	Name         string       `json:"name"`
+	HealthChecks HealthChecks `json:"health_checks"`
 }
 
 // Target 结构
@@ -43,7 +69,9 @@ type Route struct {
 
 // 创建 Upstream
 func CreateUpstream(name string) error {
-	upstream := Upstream{Name: name}
+	upstream := Upstream{
+		Name: name,
+	}
 	data, _ := json.Marshal(upstream)
 
 	resp, err := http.Post(KongAdminURL+"/upstreams", "application/json", bytes.NewBuffer(data))
