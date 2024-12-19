@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"log"
 	"time"
 )
 
@@ -17,10 +18,31 @@ type ServiceInfo struct {
 }
 
 type Service struct {
+	ServiceGo
 	ServiceInfo ServiceInfo
 	stop        chan error
 	leaseId     clientv3.LeaseID
 	client      *clientv3.Client
+}
+
+func (s *Service) StartService() error {
+	if _, err := s.InitService(); err != nil {
+		log.Fatal("service init fail")
+		return err
+	}
+	if err := s.StartGrpcServer(); err != nil {
+		log.Fatal("service start grpc fail")
+		return err
+	}
+	if err := s.StartHttpServer(); err != nil {
+		log.Fatal("service start http fail")
+		return err
+	}
+	if err := s.Register(); err != nil {
+		log.Fatal("service register fail")
+		return err
+	}
+	return nil
 }
 
 func RegisterService(serviceInfo ServiceInfo, endpoints []string) (service *Service, err error) {
