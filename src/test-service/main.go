@@ -25,7 +25,9 @@ func (t *TestService) GetStatus(ctx context.Context, empty *pb.Empty) (*pb.TestM
 		Status: 200,
 	}, nil
 }
-
+func (t *TestService) Health(ctx context.Context, empty *pb.Empty) (*pb.Empty, error) {
+	return &pb.Empty{}, nil
+}
 func main() {
 	ips, ports, err := ss.FindAvailableEndpoint(1, 2)
 	if err != nil {
@@ -118,7 +120,34 @@ func main() {
 			log.Fatalf("Error creating upstream: %v", err)
 		}
 	}
+	healthChecks := k.HealthChecks{
+		Active: k.ActiveHealthCheck{
+			HTTPPath: "/health",
+			Type:     "http",
+			Healthy: k.HealthyStatus{
+				HTTPStatuses: []int{200, 201},
+				Interval:     5,
+			},
+			Unhealthy: k.HealthyStatus{
+				HTTPStatuses: []int{500, 503},
+				Interval:     3,
+			},
+		},
+		Passive: k.PassiveHealthCheck{
+			Healthy: k.HealthyStatus{
+				HTTPStatuses: []int{200, 201},
+			},
+			Unhealthy: k.HealthyStatus{
+				HTTPStatuses: []int{500, 503},
+			},
+		},
+	}
 
+	// 注册健康检查
+	err = k.UpdateHealthChecks(testService.ServiceInfo.Name, healthChecks)
+	if err != nil {
+		log.Fatalf("Error updating health checks: %v", err)
+	}
 	// 创建 Target
 	targetExists, err := k.TargetExists(testService.ServiceInfo.Name, target)
 	if err != nil {

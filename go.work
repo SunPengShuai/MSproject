@@ -1,6 +1,6 @@
 go 1.22
 
-use cmd/test-service
-use internal/common/service
-use internal/common/test
-use internal/common/kongApi
+use ./src/test-service
+use ./src/common/service
+use ./src/common/test
+use ./src/common/kongApi

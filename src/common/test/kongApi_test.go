@@ -23,7 +23,36 @@ func TestKongApi(t *testing.T) {
 	if err := k.CreateUpstream(upstreamName); err != nil {
 		t.Fatalf("Error creating upstream: %v", err)
 	}
+	healthChecks := k.HealthChecks{
+		Active: k.ActiveHealthCheck{
+			HTTPPath: "/health",
+			Type:     "http",
+			Healthy: k.HealthyStatus{
+				HTTPStatuses: []int{200, 201},
+				Interval:     5,
+			},
+			Unhealthy: k.HealthyStatus{
+				HTTPStatuses: []int{500, 503},
+				Interval:     3,
+			},
+		},
+		Passive: k.PassiveHealthCheck{
+			Healthy: k.HealthyStatus{
+				HTTPStatuses: []int{200, 201},
+				Interval:     10,
+			},
+			Unhealthy: k.HealthyStatus{
+				HTTPStatuses: []int{500, 503},
+				Interval:     5,
+			},
+		},
+	}
 
+	// 注册健康检查
+	err := k.UpdateHealthChecks(upstreamName, healthChecks)
+	if err != nil {
+		t.Fatalf("Error updating health checks: %v", err)
+	}
 	// 添加 Target 到 Upstream
 	if err := k.AddTargetToUpstream(upstreamName, target, weight); err != nil {
 		t.Fatalf("Error adding target: %v", err)

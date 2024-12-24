@@ -18,15 +18,38 @@ type ServiceInfo struct {
 }
 
 type Service struct {
-	ServiceGo
 	ServiceInfo ServiceInfo
 	stop        chan error
 	leaseId     clientv3.LeaseID
 	client      *clientv3.Client
 }
 
+func (s *Service) Start() error {
+	s.InitService()
+	s.StartGrpcServer()
+	s.StartHttpServer()
+	s.Register()
+	return nil
+}
+func (s *Service) Stop() error {
+	return nil
+}
+
+func (s *Service) InitService() error {
+	return nil
+}
+func (s *Service) StartGrpcServer() error {
+	return nil
+}
+func (s *Service) StartHttpServer() error {
+	return nil
+}
+func (s *Service) Register() error {
+	return nil
+}
+
 func (s *Service) StartService() error {
-	if _, err := s.InitService(); err != nil {
+	if err := s.InitService(); err != nil {
 		log.Fatal("service init fail")
 		return err
 	}

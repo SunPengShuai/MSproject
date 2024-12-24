@@ -7,10 +7,12 @@ import (
 )
 
 type ServiceGo interface {
-	InitService() (*Service, error)
+	InitService() error
 	StartGrpcServer() error
 	StartHttpServer() error
 	Register() error
+	Start() error
+	Stop() error
 }
 
 func FindAvailableEndpoint(numOfIp, numOfPort int) ([]string, []int, error) {

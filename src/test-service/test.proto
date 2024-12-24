@@ -17,4 +17,9 @@ service checkStatus{
       get: "/test",
     };
   }
+  rpc health(Empty) returns (Empty){
+    option(google.api.http) = {
+      get: "/health"
+    };
+  }
 }

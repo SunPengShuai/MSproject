@@ -32,13 +32,13 @@ type PassiveHealthCheck struct {
 
 type HealthyStatus struct {
 	HTTPStatuses []int `json:"http_statuses"`
-	Interval     int   `json:"interval"`
+	Interval     int   `json:"interval,omitempty"`
 }
 
 // Upstream 结构
 type Upstream struct {
-	Name string `json:"name"`
-	// HealthChecks HealthChecks `json:"health_checks"`
+	Name         string        `json:"name"`
+	HealthChecks *HealthChecks `json:"health_checks,omitempty"`
 }
 
 // Target 结构
@@ -85,6 +85,37 @@ func CreateUpstream(name string) error {
 		return fmt.Errorf("failed to create upstream: %s", body)
 	}
 	fmt.Println("Upstream created successfully!")
+	return nil
+}
+
+func UpdateHealthChecks(upstreamName string, healthChecks HealthChecks) error {
+	url := fmt.Sprintf("%s/upstreams/%s", KongAdminURL, upstreamName)
+	data, err := json.Marshal(map[string]interface{}{
+		"healthchecks": healthChecks,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to marshal health checks: %v", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(data))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to update health checks: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		return fmt.Errorf("failed to update health checks: %s", body)
+	}
+
+	fmt.Println("Health checks updated successfully!")
 	return nil
 }
 

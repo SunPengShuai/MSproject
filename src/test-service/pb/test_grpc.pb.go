@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	CheckStatus_GetStatus_FullMethodName = "/pb.checkStatus/getStatus"
+	CheckStatus_Health_FullMethodName    = "/pb.checkStatus/health"
 )
 
 // CheckStatusClient is the client API for CheckStatus service.
@@ -27,6 +28,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type CheckStatusClient interface {
 	GetStatus(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*TestMsg, error)
+	Health(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
 }
 
 type checkStatusClient struct {
@@ -47,11 +49,22 @@ func (c *checkStatusClient) GetStatus(ctx context.Context, in *Empty, opts ...gr
 	return out, nil
 }
 
+func (c *checkStatusClient) Health(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, CheckStatus_Health_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CheckStatusServer is the server API for CheckStatus service.
 // All implementations must embed UnimplementedCheckStatusServer
 // for forward compatibility.
 type CheckStatusServer interface {
 	GetStatus(context.Context, *Empty) (*TestMsg, error)
+	Health(context.Context, *Empty) (*Empty, error)
 	mustEmbedUnimplementedCheckStatusServer()
 }
 
@@ -64,6 +77,9 @@ type UnimplementedCheckStatusServer struct{}
 
 func (UnimplementedCheckStatusServer) GetStatus(context.Context, *Empty) (*TestMsg, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetStatus not implemented")
+}
+func (UnimplementedCheckStatusServer) Health(context.Context, *Empty) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Health not implemented")
 }
 func (UnimplementedCheckStatusServer) mustEmbedUnimplementedCheckStatusServer() {}
 func (UnimplementedCheckStatusServer) testEmbeddedByValue()                     {}
@@ -104,6 +120,24 @@ func _CheckStatus_GetStatus_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CheckStatus_Health_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CheckStatusServer).Health(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CheckStatus_Health_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CheckStatusServer).Health(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CheckStatus_ServiceDesc is the grpc.ServiceDesc for CheckStatus service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -114,6 +148,10 @@ var CheckStatus_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "getStatus",
 			Handler:    _CheckStatus_GetStatus_Handler,
+		},
+		{
+			MethodName: "health",
+			Handler:    _CheckStatus_Health_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -11,6 +11,28 @@
     "application/json"
   ],
   "paths": {
+    "/health": {
+      "get": {
+        "operationId": "checkStatus_health",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/pbEmpty"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/runtimeError"
+            }
+          }
+        },
+        "tags": [
+          "checkStatus"
+        ]
+      }
+    },
     "/test": {
       "get": {
         "operationId": "checkStatus_getStatus",
@@ -35,6 +57,9 @@
     }
   },
   "definitions": {
+    "pbEmpty": {
+      "type": "object"
+    },
     "pbTestMsg": {
       "type": "object",
       "properties": {
