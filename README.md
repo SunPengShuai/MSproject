@@ -28,91 +28,42 @@ Mac\linux 下通过执行
 sh ./start_by_docker.sh
 ```
    ### B. 通过K8s部署
+```bash
+
+```
 
 ## 目录结构
-/MSproject
-├── /images                        # 图片资源
-├── /cmd
-│   ├── /user-service              # 用户服务
-│   │   └── main.go                # 用户服务的启动入口
-│   ├── /order-service             # 订单服务
-│   │   └── main.go                # 订单服务的启动入口
-│   ├── /product-service           # 商品服务
-│   │   └── main.go                # 商品服务的启动入口
-│   ├── /stock-service             # 库存服务
-│   │   └── main.go                # 库存服务的启动入口
-│   ├── /page-service              # 页面基础服务
-│   │   └── main.go                # 页面服务的启动入口
-├── /internal
-│   ├── /user                      # 用户相关业务逻辑
-│   │   ├── /handler               # HTTP 请求处理器
-│   │   ├── /service               # 业务逻辑服务
-│   │   ├── /repository            # 数据库操作
-│   │   ├── /model                 # 数据模型
-│   │   └── /util                  # 工具函数
-│   ├── /order                     # 订单相关业务逻辑
-│   │   ├── /handler               # HTTP 请求处理器
-│   │   ├── /service               # 业务逻辑服务
-│   │   ├── /repository            # 数据库操作
-│   │   ├── /model                 # 数据模型
-│   │   └── /util                  # 工具函数
-│   ├── /product                   # 商品相关业务逻辑
-│   │   ├── /handler               # HTTP 请求处理器
-│   │   ├── /service               # 业务逻辑服务
-│   │   ├── /repository            # 数据库操作
-│   │   ├── /model                 # 数据模型
-│   │   └── /util                  # 工具函数
-│   ├── /stock                     # 库存相关业务逻辑
-│   │   ├── /handler               # HTTP 请求处理器
-│   │   ├── /service               # 业务逻辑服务
-│   │   ├── /repository            # 数据库操作
-│   │   ├── /model                 # 数据模型
-│   │   └── /util                  # 工具函数
-│   ├── /page                      # 页面基础服务相关业务逻辑
-│   │   ├── /handler               # HTTP 请求处理器
-│   │   ├── /service               # 业务逻辑服务
-│   │   ├── /repository            # 数据库操作
-│   │   ├── /model                 # 数据模型
-│   │   └── /util                  # 工具函数
-│   ├── /common                    # 公共模块
-│   │   ├── /test                  # 测试目录
-│   │   ├── /config                # 配置文件加载
-│   │   ├── /logger                # 日志处理
-│   │   ├── /errors                # 错误处理
-│   │   ├── /metrics               # 监控与度量
-│   │   ├── /middleware            # 中间件（如认证、权限、日志等）
-│   │   ├── /util                  # 工具函数
-│   │   └── /service               # etcd 服务注册与发现
-│   │       ├── register.go        # 服务注册逻辑
-│   │       ├── discovery.go       # 服务发现逻辑
-├── /api
-│   ├── /user                      # 用户服务API定义（Protobuf 或 HTTP）
-│   ├── /order                     # 订单服务API定义（Protobuf 或 HTTP）
-│   ├── /product                   # 商品服务API定义（Protobuf 或 HTTP）
-│   ├── /stock                     # 库存服务API定义（Protobuf 或 HTTP）
-│   ├── /page                      # 页面基础服务API定义（Protobuf 或 HTTP）
-├── /scripts
-│   ├── /migrations                # 数据库迁移脚本
-│   ├── /deploy                    # 部署相关脚本
-│   └── /build                     # 编译与构建脚本
-├── /docker
-│   ├── /user-service.Dockerfile   # 用户服务的 Dockerfile
-│   ├── /order-service.Dockerfile  # 订单服务的 Dockerfile
-│   ├── /product-service.Dockerfile# 商品服务的 Dockerfile
-│   ├── /stock-service.Dockerfile  # 库存服务的 Dockerfile
-│   ├── /gateway-service.Dockerfile# API Gateway 服务的 Dockerfile
-│   └── /docker-compose.yml        # Docker Compose 文件，用于编排各个微服务
-├── /deploy
-│   ├── /k8s                       # Kubernetes 配置文件（Deployment、Service 等）
-│   └── /helm                      # Helm charts 用于简化 Kubernetes 部署 
-├── /test                           # 测试相关代码
-│   ├── /user-service              # 用户服务的测试
-│   ├── /order-service             # 订单服务的测试
-│   ├── /product-service           # 商品服务的测试
-│   └── /common                    # 公共功能的测试
-└── README.md                      # 项目文档（功能、API、架构等）
 
-
+MSproject
+├── README.md # 项目的说明文件，包含项目简介、安装说明、使用文档等
+├── api # 存放与外部接口相关的文件
+│ └── googleapis # 存放 Google API 的相关配置或接口代码
+├── docker # 存放与 Docker 配置和容器相关的文件
+├── etcd-cluster # 存放与 Etcd 集群相关的文件
+│ ├── data # Etcd 数据存储目录
+│ ├── docker-compose.yml # Etcd 集群的 Docker Compose 配置文件，用于启动容器
+│ └── main.go # Etcd 集群相关的 Go 程序入口文件
+├── gateway-kong # 存放 Kong API 网关相关的文件
+│ ├── config # Kong 网关的配置文件目录
+│ ├── data # Kong 网关的数据存储目录
+│ └── docker-compose.yml # 启动 Kong 网关的 Docker Compose 配置文件
+├── go.work # Go 工作空间配置文件，用于 Go Modules 的管理
+├── go.work.sum # Go Modules 校验和文件
+├── images # 存放项目中使用的图片文件
+│ ├── huancunjichuan.png # 图片文件 1
+│ └── img.png # 图片文件 2
+├── scripts # 存放各种自动化脚本
+├── src # 存放源代码文件的根目录
+│ ├── common # 公共模块或工具类代码
+│ ├── order-service # 订单服务模块代码
+│ ├── page-service # 页面服务模块代码
+│ ├── product-service # 产品服务模块代码
+│ ├── stock-service # 库存服务模块代码
+│ ├── test-service # 测试服务模块代码
+│ └── user-service # 用户服务模块代码
+├── start_by_docker.sh # 启动项目的 Docker 脚本文件
+└── test # 存放测试相关的文件
+   
 ## 技术栈一览
  - etcd 服务注册和发现
  - kong 负载均衡和流量管理

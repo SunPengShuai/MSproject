@@ -5,68 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"log"
 	"time"
 )
-
-type ServiceInfo struct {
-	Id       string //服务运行的ID
-	Name     string //服务运行的名称
-	Ip       string //服务运行的IP
-	Port     int    //服务运行的端口
-	HttpPort int    //服务运行的http端口
-}
-
-type Service struct {
-	ServiceInfo ServiceInfo
-	stop        chan error
-	leaseId     clientv3.LeaseID
-	client      *clientv3.Client
-}
-
-func (s *Service) Start() error {
-	s.InitService()
-	s.StartGrpcServer()
-	s.StartHttpServer()
-	s.Register()
-	return nil
-}
-func (s *Service) Stop() error {
-	return nil
-}
-
-func (s *Service) InitService() error {
-	return nil
-}
-func (s *Service) StartGrpcServer() error {
-	return nil
-}
-func (s *Service) StartHttpServer() error {
-	return nil
-}
-func (s *Service) Register() error {
-	return nil
-}
-
-func (s *Service) StartService() error {
-	if err := s.InitService(); err != nil {
-		log.Fatal("service init fail")
-		return err
-	}
-	if err := s.StartGrpcServer(); err != nil {
-		log.Fatal("service start grpc fail")
-		return err
-	}
-	if err := s.StartHttpServer(); err != nil {
-		log.Fatal("service start http fail")
-		return err
-	}
-	if err := s.Register(); err != nil {
-		log.Fatal("service register fail")
-		return err
-	}
-	return nil
-}
 
 func RegisterService(serviceInfo ServiceInfo, endpoints []string) (service *Service, err error) {
 	client, err := clientv3.New(clientv3.Config{
