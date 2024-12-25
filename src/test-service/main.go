@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	ss "service"
+	"test-service/handler"
 )
 
 func main() {
@@ -16,7 +17,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	sm := ss.NewServiceManager(&TestService{
+	sm := ss.NewServiceManager(&handler.TestService{
 		Service: *s,
 	})
 	sm.StartService(context.Background())
