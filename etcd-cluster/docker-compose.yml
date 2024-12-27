@@ -1,7 +1,7 @@
 version: '3.5'
 # 服务容器配置
 services:
-  etcd1:           # 自定义容器名称
+  etcd1:
     image: bitnami/etcd:latest
     environment:
       - TZ=Asia/Shanghai
@@ -14,7 +14,7 @@ services:
       - ETCD_INITIAL_CLUSTER_TOKEN=etcd-cluster
       - ETCD_INITIAL_CLUSTER=etcd1=http://etcd1:2380,etcd2=http://etcd2:2380,etcd3=http://etcd3:2380
       - ETCD_INITIAL_CLUSTER_STATE=new
-    ports:                               # 设置端口映射
+    ports:
       - "12379:2379"
       - "12380:2380"
     networks:
@@ -22,7 +22,7 @@ services:
         ipv4_address: 10.4.0.2
     restart: always
 
-  etcd2: # 自定义容器名称
+  etcd2:
     image: bitnami/etcd:latest
     environment:
       - TZ=Asia/Shanghai
@@ -35,7 +35,7 @@ services:
       - ETCD_INITIAL_CLUSTER_TOKEN=etcd-cluster
       - ETCD_INITIAL_CLUSTER=etcd1=http://etcd1:2380,etcd2=http://etcd2:2380,etcd3=http://etcd3:2380
       - ETCD_INITIAL_CLUSTER_STATE=new
-    ports: # 设置端口映射
+    ports:
       - "22379:2379"
       - "22380:2380"
     networks:
@@ -43,7 +43,7 @@ services:
         ipv4_address: 10.4.0.3
     restart: always
 
-  etcd3: # 自定义容器名称
+  etcd3:
     image: bitnami/etcd:latest
     environment:
       - TZ=Asia/Shanghai
@@ -56,7 +56,7 @@ services:
       - ETCD_INITIAL_CLUSTER_TOKEN=etcd-cluster
       - ETCD_INITIAL_CLUSTER=etcd1=http://etcd1:2380,etcd2=http://etcd2:2380,etcd3=http://etcd3:2380
       - ETCD_INITIAL_CLUSTER_STATE=new
-    ports: # 设置端口映射
+    ports:
       - "32379:2379"
       - "32380:2380"
     networks:
@@ -76,14 +76,30 @@ services:
         ipv4_address: 10.4.0.5
     ports:
       - "38080:8080"
-    #environment:
-    # ETCD keeper 不需要额外的配置，直接通过 WEB 界面连接 ETCD 集群
     restart: always
     command:
       - -h=0.0.0.0
       - -p=8080
       - -skiptls
       - -e=http://10.4.0.2:2379,http://10.4.0.3:2379,http://10.4.0.4:2379
+
+  e3w:
+    image: soyking/e3w:latest
+    container_name: e3w
+    depends_on:
+      - etcd1
+      - etcd2
+      - etcd3
+    networks:
+      etcd-cluster-net:
+        ipv4_address: 10.4.0.6
+    ports:
+      - "38081:8080"
+    environment:
+      - E3W_ETCD_ENDPOINTS=http://10.4.0.2:2379,http://10.4.0.3:2379,http://10.4.0.4:2379
+    restart: always
+    volumes:
+      - ./conf/config.default.ini:/app/conf/config.default.ini
 
 # 网络配置
 networks:

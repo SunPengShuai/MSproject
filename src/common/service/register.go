@@ -8,19 +8,15 @@ import (
 	"time"
 )
 
-func RegisterService(serviceInfo ServiceInfo, endpoints []string) (service *Service, err error) {
+func RegisterService(ss *Service, endpoints []string) (err error) {
 	client, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,
 		DialTimeout: time.Second * 10,
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	service = &Service{
-		ServiceInfo: serviceInfo,
-		client:      client,
-	}
+	ss.client = client
 	return
 }
 

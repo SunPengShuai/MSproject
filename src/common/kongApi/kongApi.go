@@ -141,6 +141,47 @@ func AddTargetToUpstream(upstreamName, targetEndPoint string, weight int) error 
 	return nil
 }
 
+// 更新 Target 参数
+func UpdateTargetInUpstream(upstreamName, targetEndPoint string, weight int) error {
+	// 创建更新后的 Target 数据
+	targetData := Target{
+		Target: targetEndPoint,
+		Weight: weight,
+	}
+
+	// 将 Target 数据转换为 JSON 格式
+	data, err := json.Marshal(targetData)
+	if err != nil {
+		return fmt.Errorf("failed to marshal target data: %v", err)
+	}
+
+	// 使用 PUT 请求更新目标参数
+	req, err := http.NewRequest(http.MethodPut, KongAdminURL+"/upstreams/"+upstreamName+"/targets/"+targetEndPoint, bytes.NewBuffer(data))
+	if err != nil {
+		return fmt.Errorf("failed to create PUT request: %v", err)
+	}
+
+	// 设置请求头
+	req.Header.Set("Content-Type", "application/json")
+
+	// 发送请求并获取响应
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to update target in upstream: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// 检查响应状态码
+	if resp.StatusCode != http.StatusOK {
+		body, _ := ioutil.ReadAll(resp.Body)
+		return fmt.Errorf("failed to update target in upstream: %s", body)
+	}
+
+	fmt.Println("Target updated successfully!")
+	return nil
+}
+
 // 创建 Service 并返回服务 ID
 func CreateService(name, hostName, protocol, path string) (string, error) {
 	service := Service{

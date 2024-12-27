@@ -9,18 +9,24 @@ import (
 	k "kongApi"
 	"log"
 	"net"
+	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 )
 
 type ServiceInfo struct {
-	Id         string   //服务运行的ID
-	Name       string   //服务运行的名称
-	Ip         string   //服务运行的IP
-	Port       int      //服务运行的端口
-	HttpPort   int      //服务运行的http端口
-	Weight     int      //服务权重
-	RoutesName string   //Kong路由名称
-	Paths      []string //kong路由路径
+	Id          string   //服务运行的ID
+	Name        string   //服务运行的名称
+	Ip          string   //服务运行的IP
+	Port        int      //服务运行的端口
+	HttpPort    int      //服务运行的http端口
+	Protocol    string   //服务协议（默认http）
+	Weight      int      //服务权重
+	HealthPath  string   //健康检查路径
+	ServicePath string   //转发到下游的请求路径
+	RoutesName  string   //Kong路由名称
+	Paths       []string //kong路由路径
 }
 
 type Service struct {
@@ -28,6 +34,8 @@ type Service struct {
 	stop        chan error
 	leaseId     clientv3.LeaseID
 	client      *clientv3.Client
+	listener    *net.Listener
+	grpcClient  *grpc.ClientConn
 }
 type ServiceManager struct {
 	ServiceGo ServiceGo
@@ -38,40 +46,34 @@ func NewServiceManager(serviceGo ServiceGo) *ServiceManager {
 		ServiceGo: serviceGo,
 	}
 }
-func (m *ServiceManager) StartService(ctx context.Context) {
-	lis, err := m.ServiceGo.StartGrpcService()
+func (m *ServiceManager) StartService(ctx context.Context) error {
+	err := m.ServiceGo.ServiceStart(m)
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	if err != nil {
-		fmt.Errorf("ServiceGo.StartGrpcService err:%v", err)
+		panic(err)
 	}
-	conn, err := m.ServiceGo.StartGrpcGatewayService()
-	if err != nil {
-		fmt.Errorf("ServiceGo.StartGrpcGatewayService err:%v", err)
-	}
-	sev, err := m.ServiceGo.ServiceRegister()
-	if err != nil {
-		fmt.Errorf("ServiceGo.ServiceRegister err:%v", err)
-	}
-	err = m.ServiceGo.ServiceKong()
-	if err != nil {
-		fmt.Errorf("ServiceGo.ServiceKong err:%v", err)
-	}
-	defer (*lis).Close()
-	defer conn.Close()
-	defer func() {
-		if err := sev.Revoke(context.Background()); err != nil {
-			log.Fatalln(err)
+	go func() {
+		select {
+		case <-ctx.Done():
+			m.ServiceGo.ServiceQuit()
+
 		}
 	}()
-	select {
-	case <-ctx.Done():
-		return
-	}
+
+	sig := <-sigs
+	m.ServiceGo.ServiceQuit()
+	fmt.Printf("Received signal: %s. Exiting...\n", sig)
+
+	return nil
 }
 
 type ServiceGo interface {
+	ServiceStart(m *ServiceManager) error
+	ServiceQuit() error
 	StartGrpcService() (*net.Listener, error)
 	StartGrpcGatewayService() (*grpc.ClientConn, error)
-	ServiceRegister() (*Service, error)
+	ServiceRegister() error
 	ServiceKong() error
 }
 
@@ -93,19 +95,61 @@ func NewService(serviceInfo *ServiceInfo) (*Service, error) {
 	return service, nil
 }
 
+func (s *Service) ServiceStart(m *ServiceManager) error {
+	listener, err := m.ServiceGo.StartGrpcService()
+	s.listener = listener
+	if err != nil {
+		log.Panic(err)
+	}
+	clientConn, err := m.ServiceGo.StartGrpcGatewayService()
+	s.grpcClient = clientConn
+	if err != nil {
+		log.Panic(err)
+	}
+	err = s.ServiceRegister()
+	if err != nil {
+		log.Panic(err)
+	}
+	err = s.ServiceKong()
+	if err != nil {
+		log.Panic(err)
+	}
+	return nil
+}
+func (s *Service) ServiceQuit() error {
+	if err := s.Revoke(context.Background()); err != nil {
+		log.Fatalln("error in unregister etcd", err)
+	}
+	if err := s.UnregisterKong(); err != nil {
+		log.Fatalln("error in unregister Kong", err)
+	}
+	s.grpcClient.Close()
+	(*s.listener).Close()
+	log.Println("service quit safely")
+	return nil
+}
+
+func (s *Service) StartGrpcService() (*net.Listener, error) {
+	return nil, errors.New("must implement StartGrpcService")
+}
+func (s *Service) StartGrpcGatewayService() (*grpc.ClientConn, error) {
+	return nil, errors.New("must implement StartGrpcGatewayService")
+}
+
 // ServiceRegister 注册服务到etcd
-func (s *Service) ServiceRegister() (*Service, error) {
+func (s *Service) ServiceRegister() error {
 	// 注册服务到服务注册中心
-	sev, err := RegisterService(s.ServiceInfo, endpoints)
+	err := RegisterService(s, endpoints)
+
 	if err != nil {
 		log.Fatal(err)
-		return nil, err
+		return err
 	}
-	go sev.StartCheckAlive(context.Background())
+	go s.StartCheckAlive(context.Background())
 
 	log.Println("Service registered successfully")
 
-	return sev, nil
+	return nil
 }
 
 // ServiceKong 注册服务到kong
@@ -126,35 +170,39 @@ func (s *Service) ServiceKong() error {
 			return err
 		}
 	}
-	healthChecks := k.HealthChecks{
-		Active: k.ActiveHealthCheck{
-			HTTPPath: "/health",
-			Type:     "http",
-			Healthy: k.HealthyStatus{
-				HTTPStatuses: []int{200, 201},
-				Interval:     5,
+	if s.ServiceInfo.HealthPath != "" {
+
+		healthChecks := k.HealthChecks{
+			Active: k.ActiveHealthCheck{
+				HTTPPath: s.ServiceInfo.HealthPath,
+				Type:     "http",
+				Healthy: k.HealthyStatus{
+					HTTPStatuses: []int{200, 201},
+					Interval:     5,
+				},
+				Unhealthy: k.HealthyStatus{
+					HTTPStatuses: []int{500, 503},
+					Interval:     3,
+				},
 			},
-			Unhealthy: k.HealthyStatus{
-				HTTPStatuses: []int{500, 503},
-				Interval:     3,
+			Passive: k.PassiveHealthCheck{
+				Healthy: k.HealthyStatus{
+					HTTPStatuses: []int{200, 201},
+				},
+				Unhealthy: k.HealthyStatus{
+					HTTPStatuses: []int{500, 503},
+				},
 			},
-		},
-		Passive: k.PassiveHealthCheck{
-			Healthy: k.HealthyStatus{
-				HTTPStatuses: []int{200, 201},
-			},
-			Unhealthy: k.HealthyStatus{
-				HTTPStatuses: []int{500, 503},
-			},
-		},
+		}
+
+		// 注册健康检查
+		err = k.UpdateHealthChecks(s.ServiceInfo.Name, healthChecks)
+		if err != nil {
+			log.Fatalf("Error updating health checks: %v", err)
+			return err
+		}
 	}
 
-	// 注册健康检查
-	err = k.UpdateHealthChecks(s.ServiceInfo.Name, healthChecks)
-	if err != nil {
-		log.Fatalf("Error updating health checks: %v", err)
-		return err
-	}
 	// 创建 Target
 	targetExists, err := k.TargetExists(s.ServiceInfo.Name, s.ServiceInfo.Ip+":"+strconv.Itoa(s.ServiceInfo.HttpPort))
 	if err != nil {
@@ -186,7 +234,7 @@ func (s *Service) ServiceKong() error {
 		s.ServiceInfo.Id = sid
 	} else {
 		log.Println("Service does not exist, creating...")
-		sid, err := k.CreateService(s.ServiceInfo.Name, s.ServiceInfo.Name, "http", "/test")
+		sid, err := k.CreateService(s.ServiceInfo.Name, s.ServiceInfo.Name, s.ServiceInfo.Protocol, s.ServiceInfo.ServicePath)
 		if err != nil {
 			log.Fatalf("Error creating service: %v", err)
 			return err
@@ -214,6 +262,14 @@ func (s *Service) ServiceKong() error {
 	return nil
 }
 
+func (s *Service) UnregisterKong() error {
+	err := k.UpdateTargetInUpstream(s.ServiceInfo.Name, s.ServiceInfo.Ip+":"+strconv.Itoa(s.ServiceInfo.HttpPort), 0)
+	if err != nil {
+		log.Fatalf("Error updating target: %v", err)
+		return err
+	}
+	return nil
+}
 func FindAvailableEndpoint(numOfIp, numOfPort int) ([]string, []int, error) {
 	/*
 		返回numOfIp个可用Ip地址和numOfPort个可用端口
