@@ -53,6 +53,7 @@ func (m *ServiceManager) StartService(ctx context.Context) error {
 	if err != nil {
 		panic(err)
 	}
+
 	go func() {
 		select {
 		case <-ctx.Done():
@@ -106,11 +107,16 @@ func (s *Service) ServiceStart(m *ServiceManager) error {
 	if err != nil {
 		log.Panic(err)
 	}
-	err = s.ServiceRegister()
+
+	if err != nil {
+		log.Fatalln("Failed to load swagger spec:", err)
+	}
+
+	err = m.ServiceGo.ServiceRegister()
 	if err != nil {
 		log.Panic(err)
 	}
-	err = s.ServiceKong()
+	err = m.ServiceGo.ServiceKong()
 	if err != nil {
 		log.Panic(err)
 	}
@@ -270,6 +276,7 @@ func (s *Service) UnregisterKong() error {
 	}
 	return nil
 }
+
 func FindAvailableEndpoint(numOfIp, numOfPort int) ([]string, []int, error) {
 	/*
 		返回numOfIp个可用Ip地址和numOfPort个可用端口

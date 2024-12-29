@@ -4,6 +4,7 @@ import (
 	"context"
 	ss "service"
 	"test-service/handler"
+	"time"
 )
 
 func main() {
@@ -17,14 +18,15 @@ func main() {
 		ServicePath: "/test",
 		Paths:       []string{"/service/test"},
 	})
-
 	if err != nil {
 		panic(err)
 	}
+
 	sm := ss.NewServiceManager(&handler.TestService{
 		Service: *s,
 	})
+	ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
 
-	sm.StartService(context.Background())
+	sm.StartService(ctx)
 
 }

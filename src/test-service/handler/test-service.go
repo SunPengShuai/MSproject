@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 	"log"
@@ -60,13 +61,29 @@ func (t TestService) StartGrpcGatewayService() (*grpc.ClientConn, error) {
 	log.Println("Serving gRPC-Gateway on http://" + gwServer.Addr)
 	return conn, nil
 }
-
+func (t TestService) ServiceKong() error {
+	fmt.Println("my logic")
+	err := t.Service.ServiceKong()
+	fmt.Println("clean something")
+	if err != nil {
+		return err
+	}
+	return nil
+}
 func (t *TestService) GetStatus(ctx context.Context, empty *pb.Empty) (*pb.TestMsg, error) {
 	return &pb.TestMsg{
 		Msg:    "ok",
 		Status: 200,
 	}, nil
 }
+
+func (t *TestService) GetStatusA(ctx context.Context, empty *pb.Empty) (*pb.TestMsg, error) {
+	return &pb.TestMsg{
+		Msg:    "service A is ok",
+		Status: 200,
+	}, nil
+}
+
 func (t *TestService) Health(ctx context.Context, empty *pb.Empty) (*pb.Empty, error) {
 	return &pb.Empty{}, nil
 }
