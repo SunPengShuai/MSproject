@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 	"log"
@@ -18,7 +17,7 @@ type TestService struct {
 	ss.Service
 }
 
-func (t TestService) StartGrpcService() (*net.Listener, error) {
+func (t TestService) StartGrpcService() (net.Listener, *grpc.Server, error) {
 	// 启动 grpc 服务
 	lis, err := net.Listen("tcp", t.ServiceInfo.Ip+":"+strconv.Itoa(t.ServiceInfo.Port))
 	if err != nil {
@@ -32,8 +31,9 @@ func (t TestService) StartGrpcService() (*net.Listener, error) {
 			log.Fatal(err)
 		}
 	}()
-	log.Println("gRPC server is running on port " + strconv.Itoa(t.ServiceInfo.Port))
-	return &lis, nil
+
+	log.Println("gRPC server is running on " + t.ServiceInfo.Ip + ":" + strconv.Itoa(t.ServiceInfo.Port))
+	return lis, grpcServer, nil
 }
 func (t TestService) StartGrpcGatewayService() (*grpc.ClientConn, error) {
 
@@ -59,17 +59,10 @@ func (t TestService) StartGrpcGatewayService() (*grpc.ClientConn, error) {
 		}
 	}()
 	log.Println("Serving gRPC-Gateway on http://" + gwServer.Addr)
+
 	return conn, nil
 }
-func (t TestService) ServiceKong() error {
-	fmt.Println("my logic")
-	err := t.Service.ServiceKong()
-	fmt.Println("clean something")
-	if err != nil {
-		return err
-	}
-	return nil
-}
+
 func (t *TestService) GetStatus(ctx context.Context, empty *pb.Empty) (*pb.TestMsg, error) {
 	return &pb.TestMsg{
 		Msg:    "ok",

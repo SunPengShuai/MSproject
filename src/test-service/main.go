@@ -16,7 +16,7 @@ func main() {
 		Protocol:    "http",
 		HealthPath:  "/health",
 		ServicePath: "/test",
-		Paths:       []string{"/service/test"},
+		Paths:       []string{"/service/test", "/service/testB"},
 	})
 	if err != nil {
 		panic(err)
@@ -25,7 +25,7 @@ func main() {
 	sm := ss.NewServiceManager(&handler.TestService{
 		Service: *s,
 	})
-	ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, _ := context.WithTimeout(context.Background(), 200*time.Second)
 
 	sm.StartService(ctx)
 

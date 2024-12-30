@@ -62,6 +62,7 @@ func (s *Service) KeepAlive(ctx context.Context) (<-chan *clientv3.LeaseKeepAliv
 // 取消租约
 func (s *Service) Revoke(ctx context.Context) error {
 	_, err := s.client.Revoke(ctx, s.leaseId)
+
 	return err
 }
 

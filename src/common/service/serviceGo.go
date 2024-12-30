@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"google.golang.org/grpc"
+	grpc "google.golang.org/grpc"
 	k "kongApi"
 	"log"
 	"net"
@@ -30,12 +30,14 @@ type ServiceInfo struct {
 }
 
 type Service struct {
-	ServiceInfo ServiceInfo
-	stop        chan error
-	leaseId     clientv3.LeaseID
-	client      *clientv3.Client
-	listener    *net.Listener
-	grpcClient  *grpc.ClientConn
+	ServiceInfo    ServiceInfo
+	context        context.Context
+	stop           chan error
+	leaseId        clientv3.LeaseID
+	client         *clientv3.Client
+	grpcServer     *grpc.Server
+	grpcClientConn *grpc.ClientConn
+	listener       net.Listener
 }
 type ServiceManager struct {
 	ServiceGo ServiceGo
@@ -47,9 +49,11 @@ func NewServiceManager(serviceGo ServiceGo) *ServiceManager {
 	}
 }
 func (m *ServiceManager) StartService(ctx context.Context) error {
+	//m.ServiceGo.SetContext(ctx)
 	err := m.ServiceGo.ServiceStart(m)
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
 	if err != nil {
 		panic(err)
 	}
@@ -57,25 +61,26 @@ func (m *ServiceManager) StartService(ctx context.Context) error {
 	go func() {
 		select {
 		case <-ctx.Done():
-			m.ServiceGo.ServiceQuit()
-
+			sigs <- syscall.SIGTERM
 		}
 	}()
 
 	sig := <-sigs
 	m.ServiceGo.ServiceQuit()
+
 	fmt.Printf("Received signal: %s. Exiting...\n", sig)
 
 	return nil
 }
 
 type ServiceGo interface {
+	SetContext(ctx context.Context)
 	ServiceStart(m *ServiceManager) error
 	ServiceQuit() error
-	StartGrpcService() (*net.Listener, error)
+	StartGrpcService() (net.Listener, *grpc.Server, error)
 	StartGrpcGatewayService() (*grpc.ClientConn, error)
-	ServiceRegister() error
-	ServiceKong() error
+	ServiceRegisterToEtcd() error
+	ServiceRegisterToKong() error
 }
 
 var endpoints = []string{"127.0.0.1:12379", "127.0.0.1:22379", "127.0.0.1:32379"}
@@ -92,18 +97,22 @@ func NewService(serviceInfo *ServiceInfo) (*Service, error) {
 	}
 	service := &Service{
 		ServiceInfo: *serviceInfo,
+		context:     context.Background(),
 	}
 	return service, nil
 }
-
+func (s *Service) SetContext(ctx context.Context) {
+	s.context = ctx
+}
 func (s *Service) ServiceStart(m *ServiceManager) error {
-	listener, err := m.ServiceGo.StartGrpcService()
+	listener, grpcserver, err := m.ServiceGo.StartGrpcService()
+	s.grpcServer = grpcserver
 	s.listener = listener
 	if err != nil {
 		log.Panic(err)
 	}
 	clientConn, err := m.ServiceGo.StartGrpcGatewayService()
-	s.grpcClient = clientConn
+	s.grpcClientConn = clientConn
 	if err != nil {
 		log.Panic(err)
 	}
@@ -112,38 +121,41 @@ func (s *Service) ServiceStart(m *ServiceManager) error {
 		log.Fatalln("Failed to load swagger spec:", err)
 	}
 
-	err = m.ServiceGo.ServiceRegister()
+	err = m.ServiceGo.ServiceRegisterToEtcd()
 	if err != nil {
 		log.Panic(err)
 	}
-	err = m.ServiceGo.ServiceKong()
+	err = m.ServiceGo.ServiceRegisterToKong()
 	if err != nil {
 		log.Panic(err)
 	}
 	return nil
 }
 func (s *Service) ServiceQuit() error {
-	if err := s.Revoke(context.Background()); err != nil {
-		log.Fatalln("error in unregister etcd", err)
-	}
 	if err := s.UnregisterKong(); err != nil {
 		log.Fatalln("error in unregister Kong", err)
 	}
-	s.grpcClient.Close()
-	(*s.listener).Close()
+	if err := s.Revoke(context.Background()); err != nil {
+		log.Fatalln("error in unregister etcd", err)
+	}
+	s.grpcServer.GracefulStop() // 关闭 gRPC 服务器
+	s.listener.Close()          // 关闭网络监听器
+	s.grpcClientConn.Close()    // 关闭 gRPC 客户端连接
+	s.client.Close()            // 关闭 etcd 客户端
 	log.Println("service quit safely")
+
 	return nil
 }
 
-func (s *Service) StartGrpcService() (*net.Listener, error) {
-	return nil, errors.New("must implement StartGrpcService")
+func (s *Service) StartGrpcService() (net.Listener, *grpc.Server, error) {
+	return nil, nil, errors.New("must implement StartGrpcService")
 }
 func (s *Service) StartGrpcGatewayService() (*grpc.ClientConn, error) {
 	return nil, errors.New("must implement StartGrpcGatewayService")
 }
 
 // ServiceRegister 注册服务到etcd
-func (s *Service) ServiceRegister() error {
+func (s *Service) ServiceRegisterToEtcd() error {
 	// 注册服务到服务注册中心
 	err := RegisterService(s, endpoints)
 
@@ -151,7 +163,7 @@ func (s *Service) ServiceRegister() error {
 		log.Fatal(err)
 		return err
 	}
-	go s.StartCheckAlive(context.Background())
+	go s.StartCheckAlive(s.context)
 
 	log.Println("Service registered successfully")
 
@@ -159,7 +171,7 @@ func (s *Service) ServiceRegister() error {
 }
 
 // ServiceKong 注册服务到kong
-func (s *Service) ServiceKong() error {
+func (s *Service) ServiceRegisterToKong() error {
 
 	// 创建 Upstream
 	upstreamExists, err := k.UpstreamExists(s.ServiceInfo.Name)
@@ -290,7 +302,6 @@ func FindAvailableEndpoint(numOfIp, numOfPort int) ([]string, []int, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get network interfaces: %v", err)
 	}
-
 	ipSet := make(map[string]struct{})
 	for _, iface := range interfaces {
 		addrs, err := iface.Addrs()
