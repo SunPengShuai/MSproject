@@ -18,12 +18,14 @@ func main() {
 		ServicePath: "/test",
 		Paths:       []string{"/service/test", "/service/testB"},
 	})
+
+	s.UpdateOnStart = true
 	if err != nil {
 		panic(err)
 	}
 
 	sm := ss.NewServiceManager(&handler.TestService{
-		Service: *s,
+		Service: s,
 	})
 	ctx, _ := context.WithTimeout(context.Background(), 200*time.Second)
 

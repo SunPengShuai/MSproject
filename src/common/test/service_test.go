@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
+	"test-service/handler"
 	"test-service/pb"
 	"testing"
 	"time"
@@ -18,22 +19,36 @@ import (
 import ss "service"
 
 func TestServiceRegister(t *testing.T) {
-	var endpoints = []string{"127.0.0.1:12379", "127.0.0.1:22379", "127.0.0.1:32379"}
-	//var endpoints = []string{"10.4.0.2:2379"}
-	serviceInfo := ss.ServiceInfo{
-		Name: "test",
-		Ip:   "127.0.0.1",
-		Port: 8080,
-	}
-	sev, err := ss.RegisterService(serviceInfo, endpoints)
+
+	s, err := ss.NewService(&ss.ServiceInfo{
+		Name:        "test", //Service和Upstream的名称
+		Weight:      100,
+		RoutesName:  "test-route",
+		Protocol:    "http",
+		HealthPath:  "/health",
+		ServicePath: "/test",
+		Paths:       []string{"/service/test", "/service/testB"},
+	})
+
+	s.UpdateOnStart = true
 	if err != nil {
-		t.Error(err)
+		panic(err)
 	}
-	go sev.StartCheckAlive(context.Background())
-	t.Log("register service success")
-	//select {}
-	sev.Revoke(context.Background())
-	t.Log("register service revoke success")
+
+	sm := ss.NewServiceManager(&handler.TestService{
+		Service: s,
+	})
+
+	ctx, _ := context.WithTimeout(context.Background(), 200*time.Second)
+	go func() {
+
+		select {
+		case <-time.After(3 * time.Second):
+			sm.StopService()
+		}
+	}()
+	sm.StartService(ctx)
+
 }
 
 func TestServiceDiscovery(t *testing.T) {
@@ -67,7 +82,7 @@ type TestService struct {
 	ss.Service
 }
 
-func (t TestService) StartGrpcService() (*net.Listener, error) {
+func (t TestService) StartGrpcService() (net.Listener, *grpc.Server, error) {
 	// 启动 grpc 服务
 	lis, err := net.Listen("tcp", t.ServiceInfo.Ip+":"+strconv.Itoa(t.ServiceInfo.Port))
 	if err != nil {
@@ -82,7 +97,7 @@ func (t TestService) StartGrpcService() (*net.Listener, error) {
 		}
 	}()
 	log.Println("gRPC server is running on port " + strconv.Itoa(t.ServiceInfo.Port))
-	return &lis, nil
+	return lis, grpcServer, nil
 }
 func (t TestService) StartGrpcGatewayService() (*grpc.ClientConn, error) {
 

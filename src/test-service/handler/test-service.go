@@ -14,7 +14,7 @@ import (
 
 type TestService struct {
 	pb.UnimplementedCheckStatusServer
-	ss.Service
+	*ss.Service
 }
 
 func (t TestService) StartGrpcService() (net.Listener, *grpc.Server, error) {

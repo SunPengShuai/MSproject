@@ -70,6 +70,7 @@ func TestKongApi(t *testing.T) {
 	}
 
 	fmt.Println("Service and Route successfully registered!")
+	k.UpdateTargetInUpstream(upstreamName, target, 0)
 }
 
 func TestGetServiceID(t *testing.T) {

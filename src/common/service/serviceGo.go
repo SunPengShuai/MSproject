@@ -31,6 +31,7 @@ type ServiceInfo struct {
 
 type Service struct {
 	ServiceInfo    ServiceInfo
+	UpdateOnStart  bool
 	context        context.Context
 	stop           chan error
 	leaseId        clientv3.LeaseID
@@ -39,8 +40,11 @@ type Service struct {
 	grpcClientConn *grpc.ClientConn
 	listener       net.Listener
 }
+
 type ServiceManager struct {
 	ServiceGo ServiceGo
+	Reload    bool //配置热更新的选项
+	sigs      chan os.Signal
 }
 
 func NewServiceManager(serviceGo ServiceGo) *ServiceManager {
@@ -48,32 +52,51 @@ func NewServiceManager(serviceGo ServiceGo) *ServiceManager {
 		ServiceGo: serviceGo,
 	}
 }
+
+func (m *ServiceManager) listenForReSet() error {
+	for {
+		//todo 监听到对应ID的配置文件变动消息
+		err := m.ServiceGo.ServiceQuit()
+		if err != nil {
+			return err
+		}
+		//todo 拉取最新的配置并更新实体
+		//m.ServiceGo.LoadConfig()
+		err = m.ServiceGo.ServiceStart(m)
+		if err != nil {
+			return err
+		}
+	}
+}
+func (m *ServiceManager) StopService() error {
+	m.ServiceGo.ServiceQuit()
+	return nil
+}
 func (m *ServiceManager) StartService(ctx context.Context) error {
 	//m.ServiceGo.SetContext(ctx)
 	err := m.ServiceGo.ServiceStart(m)
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	m.sigs = make(chan os.Signal, 1)
+	signal.Notify(m.sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	if err != nil {
 		panic(err)
 	}
-
-	go func() {
-		select {
-		case <-ctx.Done():
-			sigs <- syscall.SIGTERM
-		}
-	}()
-
-	sig := <-sigs
-	m.ServiceGo.ServiceQuit()
-
-	fmt.Printf("Received signal: %s. Exiting...\n", sig)
+	if m.Reload {
+		go m.listenForReSet()
+	}
+	select {
+	case <-ctx.Done():
+		m.StopService()
+	case sig := <-m.sigs:
+		m.StopService()
+		fmt.Printf("Received signal: %s. Exiting...\n", sig)
+	}
 
 	return nil
 }
 
 type ServiceGo interface {
+	LoadConfig(key string) error
 	SetContext(ctx context.Context)
 	ServiceStart(m *ServiceManager) error
 	ServiceQuit() error
@@ -101,10 +124,14 @@ func NewService(serviceInfo *ServiceInfo) (*Service, error) {
 	}
 	return service, nil
 }
+func (s *Service) LoadConfig(key string) error {
+	return nil
+}
 func (s *Service) SetContext(ctx context.Context) {
 	s.context = ctx
 }
 func (s *Service) ServiceStart(m *ServiceManager) error {
+	fmt.Println(s.ServiceInfo)
 	listener, grpcserver, err := m.ServiceGo.StartGrpcService()
 	s.grpcServer = grpcserver
 	s.listener = listener
@@ -179,8 +206,9 @@ func (s *Service) ServiceRegisterToKong() error {
 		log.Fatalf("Error checking upstream: %v", err)
 		return err
 	}
-	if upstreamExists {
-		log.Println("Upstream already exists, updating if needed...")
+	if upstreamExists && s.UpdateOnStart {
+		log.Println("Upstream already exists, updating ...")
+
 	} else {
 		log.Println("Upstream does not exist, creating...")
 		if err := k.CreateUpstream(s.ServiceInfo.Name); err != nil {
@@ -233,6 +261,11 @@ func (s *Service) ServiceRegisterToKong() error {
 			log.Fatalf("Error adding target: %v", err)
 			return err
 		}
+	} else {
+		if s.UpdateOnStart {
+			log.Println("Target already exists, updating ...")
+			k.UpdateTargetInUpstream(s.ServiceInfo.Name, s.ServiceInfo.Ip+":"+strconv.Itoa(s.ServiceInfo.HttpPort), s.ServiceInfo.Weight)
+		}
 	}
 
 	// 创建 Service
@@ -242,8 +275,9 @@ func (s *Service) ServiceRegisterToKong() error {
 		return err
 	}
 
-	if serviceExists {
-		log.Println("Service already exists, updating if needed...")
+	if serviceExists && s.UpdateOnStart {
+		log.Println("Service already exists, updating...")
+
 		sid, err := k.GetServiceID(s.ServiceInfo.Name)
 		if err != nil {
 			log.Fatalf("Error getting service ID: %v", err)
@@ -266,8 +300,9 @@ func (s *Service) ServiceRegisterToKong() error {
 		log.Fatalf("Error checking route: %v", err)
 		return err
 	}
-	if routeExists {
-		log.Println("Route already exists, updating if needed...")
+	if routeExists && s.UpdateOnStart {
+		log.Println("Route already exists, updating...")
+
 	} else {
 		log.Println("Route does not exist, creating...")
 		if err := k.CreateRoute(s.ServiceInfo.RoutesName, s.ServiceInfo.Id, s.ServiceInfo.Paths); err != nil {
@@ -283,7 +318,7 @@ func (s *Service) ServiceRegisterToKong() error {
 func (s *Service) UnregisterKong() error {
 	err := k.UpdateTargetInUpstream(s.ServiceInfo.Name, s.ServiceInfo.Ip+":"+strconv.Itoa(s.ServiceInfo.HttpPort), 0)
 	if err != nil {
-		log.Fatalf("Error updating target: %v", err)
+		log.Println("Error updating target: %v", err)
 		return err
 	}
 	return nil

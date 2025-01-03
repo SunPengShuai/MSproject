@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  rabbitmq1:
+    image: rabbitmq:3-management
+    hostname: rabbitmq1
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "15671:15672"  # Management UI
+      - "5671:5672"    # RabbitMQ
+    volumes:
+      - ./rabbitmq1/data:/var/lib/rabbitmq
+      - ./rabbitmq1/etc/rabbitmq:/etc/rabbitmq
+    networks:
+      - rabbitmq-net
+
+  rabbitmq2:
+    image: rabbitmq:3-management
+    hostname: rabbitmq2
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "15672:15672"  # Management UI
+      - "5672:5672"    # RabbitMQ
+    volumes:
+      - ./rabbitmq2/data:/var/lib/rabbitmq
+      - ./rabbitmq2/etc/rabbitmq:/etc/rabbitmq
+    networks:
+      - rabbitmq-net
+
+  rabbitmq3:
+    image: rabbitmq:3-management
+    hostname: rabbitmq3
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "15673:15672"  # Management UI
+      - "5673:5672"    # RabbitMQ
+    volumes:
+      - ./rabbitmq3/data:/var/lib/rabbitmq
+      - ./rabbitmq3/etc/rabbitmq:/etc/rabbitmq
+    networks:
+      - rabbitmq-net
+
+networks:
+  rabbitmq-net:
