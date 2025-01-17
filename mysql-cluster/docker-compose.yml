@@ -1,0 +1,37 @@
+version: "3.9"
+services:
+  master:
+    image: mysql:8.0
+    container_name: mysql-master
+    restart: always
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: testdb
+    volumes:
+      - ./master/my.cnf:/etc/mysql/conf.d/my.cnf
+      - ./data/master:/var/lib/mysql
+    networks:
+      - mysql-net
+
+  slave:
+    image: mysql:8.0
+    container_name: mysql-slave
+    restart: always
+    depends_on:
+      - master
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: testdb
+    volumes:
+      - ./slave/my.cnf:/etc/mysql/conf.d/my.cnf
+      - ./data/slave:/var/lib/mysql
+    networks:
+      - mysql-net
+
+networks:
+  mysql-net:
+    driver: bridge

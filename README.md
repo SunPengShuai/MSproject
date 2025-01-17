@@ -83,7 +83,11 @@ MSproject
    - elasticsearch + kibana 搜索引擎+可视化
    - 监控和日志系统
 ## 技术架构图
+整体架构
 ![img.png](images/img.png)
+
+配置中心架构
+![ConfigCenter.png](images/configCenter.png)
 
 ## 功能实现
 前端技术 (单独的项目)
@@ -94,6 +98,7 @@ MSproject
   - 商品信息模块
   - 库存服务模块
   - 页面基础服务模块
+
 
 ## 系统优化策略
 ### 微服务调用链导致的缓存雪崩 —— 熔断机制

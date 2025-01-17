@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package product;
+
+option go_package = "./pb";
+
+import "google/api/annotations.proto";
+message Empty{}
+// 商品消息定义
+message Product {
+  int32 id = 1;
+  string name = 2;
+  double price = 3;
+  int32 num = 4;
+  string unit = 5;
+  string pic = 6;
+  string desc = 7;
+  string create_time = 8;
+}
+
+// 商品请求与响应
+message ProductRequest {
+  Product product = 1;
+}
+
+message ProductResponse {
+  string message = 1;
+}
+
+message ProductID {
+  int32 id = 1;
+}
+
+message ProductListResponse {
+  repeated Product products = 1;
+}
+
+// 商品服务定义
+service ProductService {
+  rpc CreateProduct(ProductRequest) returns (ProductResponse) {
+    option (google.api.http) = {
+      post: "/products"
+      body: "product"
+    };
+  }
+
+  rpc GetProduct(ProductID) returns (Product) {
+    option (google.api.http) = {
+      get: "/products/{id}"
+    };
+  }
+
+  rpc UpdateProduct(ProductRequest) returns (ProductResponse) {
+    option (google.api.http) = {
+      put: "/products/{product.id}"
+      body: "product"
+    };
+  }
+
+  rpc DeleteProduct(ProductID) returns (ProductResponse) {
+    option (google.api.http) = {
+      delete: "/products/{id}"
+    };
+  }
+
+  rpc ListProducts(Empty) returns (ProductListResponse) {
+    option (google.api.http) = {
+      get: "/products"
+    };
+  }
+}

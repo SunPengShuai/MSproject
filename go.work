@@ -2,5 +2,8 @@ go 1.22
 
 use ./src/test-service
 use ./src/common/service
+use ./src/ms-service
 use ./src/common/test
+use ./src/user-service
+use ./src/product-service
 use ./src/common/kongApi
