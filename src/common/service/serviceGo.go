@@ -16,7 +16,8 @@ import (
 )
 
 type ServiceInfo struct {
-	Id          string   //服务运行的ID
+	Id string //服务运行的ID
+	//todo 放到父类中
 	Name        string   //服务运行的名称
 	Ip          string   //服务运行的IP
 	Port        int      //服务运行的端口

@@ -1,37 +1,24 @@
-version: "3.9"
+version: '3.7'
 services:
-  master:
+  mysql:
+    container_name: mysql
     image: mysql:8.0
-    container_name: mysql-master
     restart: always
     ports:
-      - "3306:3306"
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: testdb
+      - 13306:3306
+    privileged: true #选项解析（特权模式：赋予容器几乎与主机相同的权限）
     volumes:
-      - ./master/my.cnf:/etc/mysql/conf.d/my.cnf
-      - ./data/master:/var/lib/mysql
-    networks:
-      - mysql-net
-
-  slave:
-    image: mysql:8.0
-    container_name: mysql-slave
-    restart: always
-    depends_on:
-      - master
-    ports:
-      - "3307:3306"
+      - /Users/kuangjiacheng/dockerapp/mysql/log:/var/log/mysql
+      - /Users/kuangjiacheng/dockerapp/mysql/conf/my.cnf:/etc/mysql/my.cnf
+      - /Users/kuangjiacheng/dockerapp/mysql/data:/var/lib/mysql
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: testdb
-    volumes:
-      - ./slave/my.cnf:/etc/mysql/conf.d/my.cnf
-      - ./data/slave:/var/lib/mysql
-    networks:
-      - mysql-net
-
-networks:
-  mysql-net:
-    driver: bridge
+      MYSQL_ROOT_PASSWORD: yourpassword # root用户密码
+    command: [
+      '--default-authentication-plugin=caching_sha2_password',
+      '--character-set-server=utf8mb4',
+      '--collation-server=utf8mb4_general_ci',
+      '--explicit_defaults_for_timestamp=true',
+      '--lower_case_table_names=1',
+      '--max_allowed_packet=128M',
+      '--max_connections=3000'
+    ]
