@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 )
 
@@ -177,23 +178,51 @@ func (s *Service) ServiceQuit() error {
 	return nil
 }
 func (s *Service) GormMigrate(dsn string, models ...interface{}) error {
+	// 默认 DSN
 	if dsn == "" {
 		dsn = "root:root@tcp(127.0.0.1:3306)/msmall?charset=utf8mb4&parseTime=True&loc=Local"
 	}
+
+	// 提取数据库名称和基础 DSN
+	dsnWithoutDB := dsn[:strings.LastIndex(dsn, "/")] + "/"
+	dbName := dsn[strings.LastIndex(dsn, "/")+1:]
+	if idx := strings.Index(dbName, "?"); idx != -1 {
+		dbName = dbName[:idx]
+	}
+
+	// 连接到 MySQL Server（不包括数据库名）
+	serverDB, err := gorm.Open(mysql.Open(dsnWithoutDB), &gorm.Config{})
+	if err != nil {
+		fmt.Printf("Failed to connect to database server: %v\n", err)
+		return err
+	}
+
+	// 检查数据库是否存在，如果不存在则创建
+	createDBQuery := fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;", dbName)
+	if err := serverDB.Exec(createDBQuery).Error; err != nil {
+		fmt.Printf("Failed to create database: %v\n", err)
+		return err
+	}
+
+	// 重新连接到目标数据库
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		fmt.Printf("Failed to connect to database: %v\n", err)
 		return err
 	}
+
+	// 自动迁移模型
 	for _, model := range models {
 		if err := db.AutoMigrate(model); err != nil {
 			fmt.Printf("Failed to auto migrate: %v\n", err)
 		}
 	}
 
+	// 保存 DB 实例到 Service
 	s.GormDB = db
 	return nil
 }
+
 func (s *Service) StartGrpcService() (net.Listener, *grpc.Server, error) {
 	return nil, nil, errors.New("must implement StartGrpcService")
 }

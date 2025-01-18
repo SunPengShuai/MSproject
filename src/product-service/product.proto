@@ -21,6 +21,8 @@ message Product {
 // 商品请求与响应
 message ProductRequest {
   Product product = 1;
+  int32 max_price = 2;
+  int32 min_price = 3;
 }
 
 message ProductResponse {
@@ -66,6 +68,11 @@ service ProductService {
   rpc ListProducts(ProductRequest) returns (ProductListResponse) {
     option (google.api.http) = {
       get: "/products",
+      query: "product.name",
+      query: "product.price",
+      query: "product.id",
+      query: "max_price",
+      query: "min_price"
     };
   }
 }

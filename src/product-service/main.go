@@ -20,7 +20,7 @@ func main() {
 		Paths:       []string{"/service/products"},
 	})
 
-	s.GormMigrate("", &models.Product{})
+	s.GormMigrate("root:root@tcp(127.0.0.1:3307)/msmall?charset=utf8mb4&parseTime=True&loc=Local", &models.Product{})
 
 	s.UpdateOnStart = true
 	if err != nil {
