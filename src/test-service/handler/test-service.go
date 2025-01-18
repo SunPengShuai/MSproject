@@ -72,7 +72,7 @@ func (t *TestService) GetStatus(ctx context.Context, empty *pb.Empty) (*pb.TestM
 
 func (t *TestService) GetStatusA(ctx context.Context, empty *pb.Empty) (*pb.TestMsg, error) {
 	return &pb.TestMsg{
-		Msg:    "service A is ok",
+		Msg:    "service A is ok from:" + t.ServiceInfo.Ip,
 		Status: 200,
 	}, nil
 }

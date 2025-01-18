@@ -6,6 +6,8 @@ import (
 	"fmt"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	grpc "google.golang.org/grpc"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 	k "kongApi"
 	"log"
 	"net"
@@ -16,8 +18,7 @@ import (
 )
 
 type ServiceInfo struct {
-	Id string //服务运行的ID
-	//todo 放到父类中
+	Id          string   //服务运行的ID
 	Name        string   //服务运行的名称
 	Ip          string   //服务运行的IP
 	Port        int      //服务运行的端口
@@ -40,6 +41,7 @@ type Service struct {
 	grpcServer     *grpc.Server
 	grpcClientConn *grpc.ClientConn
 	listener       net.Listener
+	GormDB         *gorm.DB
 }
 
 type ServiceManager struct {
@@ -174,7 +176,24 @@ func (s *Service) ServiceQuit() error {
 
 	return nil
 }
+func (s *Service) GormMigrate(dsn string, models ...interface{}) error {
+	if dsn == "" {
+		dsn = "root:root@tcp(127.0.0.1:3306)/msmall?charset=utf8mb4&parseTime=True&loc=Local"
+	}
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	if err != nil {
+		fmt.Printf("Failed to connect to database: %v\n", err)
+		return err
+	}
+	for _, model := range models {
+		if err := db.AutoMigrate(model); err != nil {
+			fmt.Printf("Failed to auto migrate: %v\n", err)
+		}
+	}
 
+	s.GormDB = db
+	return nil
+}
 func (s *Service) StartGrpcService() (net.Listener, *grpc.Server, error) {
 	return nil, nil, errors.New("must implement StartGrpcService")
 }

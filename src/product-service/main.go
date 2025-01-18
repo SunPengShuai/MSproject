@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"product-service/handler"
+	"product-service/models"
 	ss "service"
 	"time"
 )
@@ -16,8 +17,10 @@ func main() {
 		Protocol:    "http",
 		HealthPath:  "/health",
 		ServicePath: "/products",
-		Paths:       []string{"/service/product"},
+		Paths:       []string{"/service/products"},
 	})
+
+	s.GormMigrate("", &models.Product{})
 
 	s.UpdateOnStart = true
 	if err != nil {
@@ -27,7 +30,8 @@ func main() {
 	sm := ss.NewServiceManager(&handler.ProductService{
 		Service: s,
 	})
-	ctx, _ := context.WithTimeout(context.Background(), 200*time.Second)
+
+	ctx, _ := context.WithTimeout(context.Background(), 200*time.Minute)
 
 	sm.StartService(ctx)
 

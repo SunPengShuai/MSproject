@@ -1,24 +1,65 @@
-version: '3.7'
+version: '3'
 services:
-  mysql:
-    container_name: mysql
-    image: mysql:8.0
-    restart: always
-    ports:
-      - 13306:3306
-    privileged: true #选项解析（特权模式：赋予容器几乎与主机相同的权限）
-    volumes:
-      - /Users/kuangjiacheng/dockerapp/mysql/log:/var/log/mysql
-      - /Users/kuangjiacheng/dockerapp/mysql/conf/my.cnf:/etc/mysql/my.cnf
-      - /Users/kuangjiacheng/dockerapp/mysql/data:/var/lib/mysql
+  master:
     environment:
-      MYSQL_ROOT_PASSWORD: yourpassword # root用户密码
-    command: [
-      '--default-authentication-plugin=caching_sha2_password',
-      '--character-set-server=utf8mb4',
-      '--collation-server=utf8mb4_general_ci',
-      '--explicit_defaults_for_timestamp=true',
-      '--lower_case_table_names=1',
-      '--max_allowed_packet=128M',
-      '--max_connections=3000'
-    ]
+      ## root账号的密码
+      MYSQL_ROOT_PASSWORD: root
+      TZ: Asia/Shanghai
+      ## 新建mysql账号
+      MYSQL_USER: 'user'
+      MYSQL_PASSWORD: user
+      MYSQL_DATABASE: 'mysql_db'
+    image: "docker.io/mysql:latest"
+    container_name: mysql-master
+    restart: always
+    ## 映射挂载
+    volumes:
+      ## 数据目录，要确保先创建好
+      - "./master/data:/var/lib/mysql"
+      - "./master/config/my.cnf:/etc/mysql/my.cnf"
+      - "./master/mysql-files:/var/lib/mysql-files"
+    ports:
+      - "3306:3306"
+    command:
+      --max_connections=1000
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_general_ci
+      --default-authentication-plugin=mysql_native_password
+    networks:
+      basenetwork:
+        ipv4_address: 192.168.100.5
+  slave:
+    environment:
+      ## root账号的密码
+      MYSQL_ROOT_PASSWORD: root
+      TZ: Asia/Shanghai
+      ## 新建mysql账号
+      MYSQL_USER: 'user'
+      MYSQL_PASSWORD: user
+      MYSQL_DATABASE: 'mysql_db'
+    image: "docker.io/mysql:latest"
+    container_name: mysql-slave
+    restart: always
+    ## 映射挂载
+    volumes:
+      ## 数据目录，要确保先创建好
+      - "./slave/data:/var/lib/mysql"
+      - "./slave/config/my.cnf:/etc/mysql/my.cnf"
+      - "./slave/mysql-files:/var/lib/mysql-files"
+    ports:
+      - "3307:3306"
+    command:
+      --max_connections=1000
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_general_ci
+      --default-authentication-plugin=mysql_native_password
+    networks:
+      basenetwork:
+        ipv4_address: 192.168.100.6
+
+networks:
+  basenetwork:
+    ipam:
+      config:
+        - subnet: 192.168.100.0/24
+

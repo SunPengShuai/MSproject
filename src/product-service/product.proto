@@ -8,7 +8,7 @@ import "google/api/annotations.proto";
 message Empty{}
 // 商品消息定义
 message Product {
-  int32 id = 1;
+  int64 id = 1;
   string name = 2;
   double price = 3;
   int32 num = 4;
@@ -63,9 +63,9 @@ service ProductService {
     };
   }
 
-  rpc ListProducts(Empty) returns (ProductListResponse) {
+  rpc ListProducts(ProductRequest) returns (ProductListResponse) {
     option (google.api.http) = {
-      get: "/products"
+      get: "/products",
     };
   }
 }

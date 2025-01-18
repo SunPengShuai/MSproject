@@ -85,6 +85,7 @@ MSproject
 ## 技术架构图
 整体架构
 ![img.png](images/img.png)
+服务启动规范
 
 配置中心架构
 ![ConfigCenter.png](images/configCenter.png)
