@@ -1,0 +1,99 @@
+syntax = "proto3";
+import "/api/googleapis/google/api/annotations.proto";
+
+package user;
+option go_package = "./pb";
+
+message Empty{}
+// 用户消息定义
+message User {
+  uint64 id = 1;
+  string username = 2;
+  string account = 3;
+  string password = 4;
+  string phone = 5;
+  uint32 gender = 6;
+  uint32 user_status = 7;
+  string email = 8;
+  string create_time = 9;
+  string update_time = 10;
+  uint32 role = 11;
+  string avatar = 12;
+  uint32 is_delete = 13;
+}
+
+// 用户请求与响应
+message UserRequest {
+  User user = 1;
+}
+
+message UserResponse {
+  string message = 1;
+}
+
+message UserID {
+  int32 id = 1;
+}
+
+message UserLoginRequest {
+  string account = 1;
+  string password = 2;
+}
+
+message UserRegisterRequest {
+  string username = 2;
+  string account = 3;
+  string password = 4;
+  optional string phone = 5;
+  optional uint32 gender = 6;
+  optional string email = 8;
+  optional string avatarUrl = 12;
+}
+
+message UserListResponse {
+  repeated User users = 1;
+}
+
+// 用户服务定义
+service UserService {
+  rpc Login(UserLoginRequest) returns (UserResponse) {
+    option (google.api.http) = {
+      post: "/users/login"
+      // 将UserLoginRequest中的所有字段映射到请求的body中
+      body: "*"
+    };
+  }
+
+  rpc Register(UserRegisterRequest) returns (UserResponse) {
+    option (google.api.http) = {
+      post: "/users/register"
+      // 将UserRegisterRequest中的所有字段映射到请求的body中
+      body: "*"
+    };
+  }
+
+  rpc GetUser(UserID) returns (User) {
+    option (google.api.http) = {
+      get: "/users/{id}"
+    };
+  }
+
+  rpc UpdateUser(UserRequest) returns (UserResponse) {
+    option (google.api.http) = {
+      put: "/users/{user.id}"
+      body: "user"
+    };
+  }
+
+  rpc DeleteUser(UserID) returns (UserResponse) {
+    option (google.api.http) = {
+      delete: "/users/{id}"
+    };
+  }
+
+  rpc ListUsers(Empty) returns (UserListResponse) {
+    option (google.api.http) = {
+      get: "/users"
+    };
+  }
+}
