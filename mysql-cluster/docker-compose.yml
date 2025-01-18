@@ -1,65 +1,38 @@
-version: '3'
+version: "3.9"
 services:
   master:
-    environment:
-      ## root账号的密码
-      MYSQL_ROOT_PASSWORD: root
-      TZ: Asia/Shanghai
-      ## 新建mysql账号
-      MYSQL_USER: 'user'
-      MYSQL_PASSWORD: user
-      MYSQL_DATABASE: 'mysql_db'
-    image: "docker.io/mysql:latest"
+    image: mysql:8.4.1
     container_name: mysql-master
     restart: always
-    ## 映射挂载
-    volumes:
-      ## 数据目录，要确保先创建好
-      - "./master/data:/var/lib/mysql"
-      - "./master/config/my.cnf:/etc/mysql/my.cnf"
-      - "./master/mysql-files:/var/lib/mysql-files"
-    ports:
-      - "3306:3306"
-    command:
-      --max_connections=1000
-      --character-set-server=utf8mb4
-      --collation-server=utf8mb4_general_ci
-      --default-authentication-plugin=mysql_native_password
-    networks:
-      basenetwork:
-        ipv4_address: 192.168.100.5
-  slave:
-    environment:
-      ## root账号的密码
-      MYSQL_ROOT_PASSWORD: root
-      TZ: Asia/Shanghai
-      ## 新建mysql账号
-      MYSQL_USER: 'user'
-      MYSQL_PASSWORD: user
-      MYSQL_DATABASE: 'mysql_db'
-    image: "docker.io/mysql:latest"
-    container_name: mysql-slave
-    restart: always
-    ## 映射挂载
-    volumes:
-      ## 数据目录，要确保先创建好
-      - "./slave/data:/var/lib/mysql"
-      - "./slave/config/my.cnf:/etc/mysql/my.cnf"
-      - "./slave/mysql-files:/var/lib/mysql-files"
     ports:
       - "3307:3306"
-    command:
-      --max_connections=1000
-      --character-set-server=utf8mb4
-      --collation-server=utf8mb4_general_ci
-      --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: test
+    volumes:
+      - ./master/log:/var/log/mysql
+      - ./master/data:/var/lib/mysql
+      - ./master/conf:/etc/mysql/conf.d
     networks:
-      basenetwork:
-        ipv4_address: 192.168.100.6
+      - mysql-net
+
+  slave:
+    image: mysql:8.4.1
+    container_name: mysql-slave
+    restart: always
+    depends_on:
+      - master
+    ports:
+      - "3308:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - ./slave/log:/var/log/mysql
+      - ./slave/data:/var/lib/mysql
+      - ./slave/conf:/etc/mysql/conf.d
+    networks:
+      - mysql-net
 
 networks:
-  basenetwork:
-    ipam:
-      config:
-        - subnet: 192.168.100.0/24
-
+  mysql-net:
+    driver: bridge
