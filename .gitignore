@@ -1,8 +1,20 @@
-gateway-kong/data
-etcd-cluster/data
-mq-rabbit/rabbitmq1/data
-mq-rabbit/rabbitmq2/data
-mq-rabbit/rabbitmq3/data
-mysql/mysql_data
-mysql-cluster/master/data
-mysql-cluster/slave/data
+# 忽略网关服务的数据目录
+gateway-kong/data/
+
+# 忽略 etcd 集群的数据目录
+etcd-cluster/data/
+
+# 忽略 RabbitMQ 集群节点的数据目录
+mq-rabbit/rabbitmq1/data/
+mq-rabbit/rabbitmq2/data/
+mq-rabbit/rabbitmq3/data/
+
+# 忽略 MySQL 单实例的数据目录
+mysql/mysql_data/
+
+# 忽略 MySQL 集群主从实例的数据目录
+mysql-cluster/master/data/
+mysql-cluster/slave/data/
+
+# 保留空目录的占位文件（可选）
+!*/data/.keep
