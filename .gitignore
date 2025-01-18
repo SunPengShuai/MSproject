@@ -1,0 +1,8 @@
+gateway-kong/data
+etcd-cluster/data
+mq-rabbit/rabbitmq1/data
+mq-rabbit/rabbitmq2/data
+mq-rabbit/rabbitmq3/data
+mysql/mysql_data
+mysql-cluster/master/data
+mysql-cluster/slave/data
