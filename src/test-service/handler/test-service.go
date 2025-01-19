@@ -2,8 +2,10 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"log"
 	"net"
 	"net/http"
@@ -64,8 +66,13 @@ func (t TestService) StartGrpcGatewayService() (*grpc.ClientConn, error) {
 }
 
 func (t *TestService) GetStatus(ctx context.Context, empty *pb.Empty) (*pb.TestMsg, error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("无法获取元数据")
+	}
+	fmt.Println(md)
 	return &pb.TestMsg{
-		Msg:    "ok",
+		Msg:    "ok,recv_token_from_client:" + md.Get("authorization")[0],
 		Status: 200,
 	}, nil
 }

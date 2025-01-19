@@ -13,7 +13,5 @@ type ProductSeckill struct {
 	CreateTime time.Time `gorm:"column:create_time" json:"create_time"`        // 活动创建时间
 }
 
-// TableName 设置表名为 sys_product_seckill
-func (ProductSeckill) TableName() string {
-	return "sys_product_seckill"
+type SeckillNotice struct {
 }

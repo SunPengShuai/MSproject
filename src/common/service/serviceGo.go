@@ -118,9 +118,15 @@ func NewService(serviceInfo *ServiceInfo) (*Service, error) {
 		if err != nil {
 			log.Fatal("FindAvailableEndpoint err:", err)
 		}
-		serviceInfo.Port = ports[0]
-		serviceInfo.HttpPort = ports[1]
-		serviceInfo.Ip = ips[0]
+		if serviceInfo.Port == 0 {
+			serviceInfo.Port = ports[0]
+		}
+		if serviceInfo.HttpPort == 0 {
+			serviceInfo.HttpPort = ports[1]
+		}
+		if serviceInfo.Ip == "" {
+			serviceInfo.Ip = ips[0]
+		}
 	}
 	service := &Service{
 		ServiceInfo: *serviceInfo,

@@ -17,6 +17,8 @@ func main() {
 		HealthPath:  "/health",
 		ServicePath: "/test",
 		Paths:       []string{"/service/test", "/service/testB"},
+		Port:        50001,
+		Ip:          "127.0.0.1",
 	})
 
 	s.UpdateOnStart = true
