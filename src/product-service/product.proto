@@ -68,11 +68,11 @@ service ProductService {
   rpc ListProducts(ProductRequest) returns (ProductListResponse) {
     option (google.api.http) = {
       get: "/products",
-      query: "product.name",
-      query: "product.price",
-      query: "product.id",
-      query: "max_price",
-      query: "min_price"
+    };
+  }
+  rpc health(Empty) returns (Empty){
+    option(google.api.http) = {
+      get: "/health"
     };
   }
 }

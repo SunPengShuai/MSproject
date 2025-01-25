@@ -9,6 +9,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"gorm.io/gorm"
 	"log"
+	"math"
 	"net"
 	"net/http"
 	"product-service/models"
@@ -174,9 +175,16 @@ func (t *ProductService) DeleteProduct(ctx context.Context, req *pb.ProductID) (
 
 // ListProducts 列出所有商品
 func (t *ProductService) ListProducts(ctx context.Context, req *pb.ProductRequest) (*pb.ProductListResponse, error) {
+	//fmt.Println(req)
 	var products []models.Product
+	minPrice := req.MinPrice
+	maxPrice := int32(math.MaxInt32)
+	if req.MaxPrice > 0 {
+		maxPrice = req.MaxPrice
+	}
+
 	// 查询所有商品
-	if err := t.Service.GormDB.WithContext(ctx).Model(&models.Product{}).Where(req.Product).Find(&products).Error; err != nil {
+	if err := t.Service.GormDB.WithContext(ctx).Model(&models.Product{}).Where(req.Product).Where("price >= ?", minPrice).Where("price <= ?", maxPrice).Find(&products).Error; err != nil {
 		return nil, fmt.Errorf("failed to list products: %w", err)
 	}
 

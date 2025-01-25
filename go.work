@@ -15,3 +15,9 @@ use ./src/user-service
 use ./src/product-service
 
 use ./src/common/kongApi
+
+use src/common/gid
+
+use src/common/storage
+
+use src/common/mqApi

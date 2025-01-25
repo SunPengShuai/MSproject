@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 )
 
 type ServiceInfo struct {
@@ -179,6 +180,7 @@ func (s *Service) ServiceQuit() error {
 	s.listener.Close()          // 关闭网络监听器
 	s.grpcClientConn.Close()    // 关闭 gRPC 客户端连接
 	s.client.Close()            // 关闭 etcd 客户端
+
 	log.Println("service quit safely")
 
 	return nil
@@ -212,6 +214,10 @@ func (s *Service) GormMigrate(dsn string, models ...interface{}) error {
 
 	// 重新连接到目标数据库
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	sqlDB, _ := db.DB()
+	sqlDB.SetMaxOpenConns(100)
+	sqlDB.SetMaxIdleConns(50)
+	sqlDB.SetConnMaxLifetime(10 * time.Minute)
 	if err != nil {
 		fmt.Printf("Failed to connect to database: %v\n", err)
 		return err

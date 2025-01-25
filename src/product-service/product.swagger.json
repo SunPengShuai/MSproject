@@ -11,6 +11,28 @@
     "application/json"
   ],
   "paths": {
+    "/health": {
+      "get": {
+        "operationId": "ProductService_health",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/productEmpty"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/runtimeError"
+            }
+          }
+        },
+        "tags": [
+          "ProductService"
+        ]
+      }
+    },
     "/products": {
       "get": {
         "operationId": "ProductService_ListProducts",
@@ -79,6 +101,20 @@
             "in": "query",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "max_price",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "min_price",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
           }
         ],
         "tags": [
@@ -109,6 +145,20 @@
             "schema": {
               "$ref": "#/definitions/productProduct"
             }
+          },
+          {
+            "name": "max_price",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "min_price",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
           }
         ],
         "tags": [
@@ -208,6 +258,20 @@
             "schema": {
               "$ref": "#/definitions/productProduct"
             }
+          },
+          {
+            "name": "max_price",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "min_price",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
           }
         ],
         "tags": [
@@ -217,6 +281,9 @@
     }
   },
   "definitions": {
+    "productEmpty": {
+      "type": "object"
+    },
     "productProduct": {
       "type": "object",
       "properties": {
