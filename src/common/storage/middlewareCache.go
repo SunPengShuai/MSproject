@@ -44,7 +44,7 @@ func (rc *RedisCache) Get(ctx context.Context, key string) (interface{}, bool, e
 		// 发生错误
 		return nil, false, err
 	}
-	// 假设返回结果是字符串，你可以在此处转换为需要的类型
+
 	return result, true, nil
 }
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"gid"
 	"log"
+	"mqApi"
 	"strings"
 	"time"
 )
@@ -193,55 +194,93 @@ type BaseStorage[T Key] struct {
 	LocalCache      Cache[T]
 	MiddlewareCache Cache[T]
 	ORM             ORM
+	stMq            *mqApi.RabbitMQApi
 }
 
 // 构造函数，初始化 BaseStorage
 func NewBaseStorage[T Key](localCache Cache[T], middlewareCache Cache[T], orm ORM) *BaseStorage[T] {
+	mqapi, err := mqApi.NewRabbitMQApi("ampq://guest:guest@localhost:5672/", "BaseStorage", "direct")
+	if err != nil {
+		log.Fatal(err)
+	}
+	mqapi.BindQ("midCacheSys", "midCache")
+	mqapi.BindQ("OrmSys", "orm")
+
 	return &BaseStorage[T]{
 		LocalCache:      localCache,
 		MiddlewareCache: middlewareCache,
 		ORM:             orm,
+		stMq:            mqapi,
 	}
 }
 
 // 获取数据，依次从本地缓存、缓存中间件和 ORM 中查找
+// Filter 用于根据提供的条件（精确、范围、模糊等）过滤数据
 func (s *BaseStorage[T]) Filter(ctx context.Context, model *STData, condition FieldCondition) *QuerySet {
+	// 初始化一个空的 QuerySet
+	var GID T
+	switch any(GID).(type) {
+	case string: // 假设 base64 是字符串类型
+		item, _ := model.gid.GetBase64()
+		GID = any(item).(T)
+	case int64:
+		item, _ := model.gid.GetInt64()
+		GID = any(item).(T)
+	default:
+		log.Fatal("invalid GID type")
+	}
+	var result *QuerySet
+
 	// 先从本地缓存获取
-	if value, found, err := s.LocalCache.Get(ctx, key); found {
+	if value, found, err := s.LocalCache.Get(ctx, GID); found && err == nil {
 		log.Println("Found in local cache")
-		return value, nil
+		// 根据条件过滤缓存数据
+		result = (&QuerySet{res: []interface{}{value}}).Filter(model, condition)
 	}
 
 	// 再从缓存中间件获取
-	if value, found, err := s.MiddlewareCache.Get(ctx, key); found {
-		log.Println("Found in middleware cache")
-		s.LocalCache.Set(ctx, key, value, 3600) // 放到本地缓存中
-		return value, nil
+	if result == nil || result.Count() == 0 {
+		if value, found, err := s.MiddlewareCache.Get(ctx, GID); found && err == nil {
+			log.Println("Found in middleware cache")
+			// 根据条件过滤缓存数据
+			result = (&QuerySet{res: []interface{}{value}}).Filter(model, condition)
+		}
 	}
 
 	// 最后从 ORM 中获取
-	if value, found := s.ORM.Get(key); found {
-		log.Println("Found in ORM")
-		s.LocalCache.Set(ctx, key, value, 3600)      // 放到本地缓存中
-		s.MiddlewareCache.Set(ctx, key, value, 3600) // 放到缓存中间件
-		return value, nil
+	if result == nil || result.Count() == 0 {
+		if value, err := s.ORM.FindAll(model.value, condition); err == nil {
+			log.Println("Found in ORM")
+			// 根据条件过滤 ORM 数据
+			result = (&QuerySet{res: value}).Filter(model, condition)
+		}
 	}
 
-	return nil, nil
+	// 如果所有存储都没有找到符合条件的数据，返回空结果
+	if result == nil {
+		result = &QuerySet{res: []interface{}{}}
+	}
+
+	// 返回过滤后的结果
+	return result
 }
 
 // 设置数据
 func (s *BaseStorage[T]) Storage(ctx context.Context, data *STData) error {
-	// 存储操作使用orm直接存储即可
-	err := s.ORM.Create(value)
+
+	// 向中间件缓存系统发送增加请求
+	err := s.stMq.SendMsg(mqApi.MqMsg{
+		MsgType: mqApi.StorageCreate,
+		Data:    *data,
+	}, "midCache")
+	if err != nil {
+		return err
+	}
 	return err
 }
 
 // 更新数据
 func (s *BaseStorage[T]) Update(ctx context.Context, old *STData, new *STData) error {
-	// 更新数据时策略：
-	//1 命中本地缓存刷新缓存时间，失效时（换出或者失效）写入下级存储系统；未命中去下级缓存更新
-	//2 命中时清楚缓存项，发送更新请求到消息队列，下级缓存系统从队列拿到更新消息后更新；未命中去下级更新** [采用]
 	var GID T
 	switch any(GID).(type) {
 	case string: // 假设 base64 是字符串类型
@@ -265,10 +304,19 @@ func (s *BaseStorage[T]) Update(ctx context.Context, old *STData, new *STData) e
 		return err
 	}
 	if ex {
-		s.MiddlewareCache.Delete(ctx, GID)
+		// 向中间件缓存系统发送删除请求
+		err := s.stMq.SendMsg(mqApi.MqMsg{
+			MsgType: mqApi.StorageDelete,
+			Data:    *old,
+		}, "midCache")
+		if err != nil {
+			return err
+		}
 	}
-	// todo send update msg to mq
-	//err = s.ORM.Update(old.value,old.gid,new.value.(map[string]interface{}))
+	s.stMq.SendMsg(mqApi.MqMsg{
+		MsgType: mqApi.StorageUpdate,
+		Data:    []STData{*old, *new},
+	}, "orm")
 	if err != nil {
 		return err
 	}
@@ -288,10 +336,26 @@ func (s *BaseStorage[T]) Delete(ctx context.Context, data *STData) error {
 	default:
 		return errors.New("invalid gid type")
 	}
+
 	// 调用 LocalCache 的删除方法
 	if err := s.LocalCache.Delete(ctx, GID); err != nil {
 		return fmt.Errorf("failed to delete from local cache: %w", err)
 	}
-
+	// 向中间件缓存系统发送删除请求
+	err := s.stMq.SendMsg(mqApi.MqMsg{
+		MsgType: mqApi.StorageDelete,
+		Data:    *data,
+	}, "midCache")
+	if err != nil {
+		return err
+	}
+	// 向Orm系统发送删除请求
+	s.stMq.SendMsg(mqApi.MqMsg{
+		MsgType: mqApi.StorageDelete,
+		Data:    data,
+	}, "orm")
+	if err != nil {
+		return err
+	}
 	return nil
 }

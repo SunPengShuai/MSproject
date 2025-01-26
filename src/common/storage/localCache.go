@@ -3,6 +3,7 @@ package storage
 import (
 	"container/list"
 	"context"
+	"errors"
 	"sync"
 	"time"
 )
@@ -20,7 +21,7 @@ type LocalCache[T Key] struct {
 
 type cacheItem[T Key] struct {
 	key        T
-	value      *STData
+	value      interface{}
 	expiration time.Time // 过期时间
 }
 
@@ -43,6 +44,9 @@ func NewCache[T Key](capacity int, cleanTime time.Duration) *LocalCache[T] {
 
 // Get 从缓存中获取数据
 func (c *LocalCache[T]) Get(ctx context.Context, key T) (interface{}, bool, error) {
+	if c.shutdown {
+		return nil, false, errors.New("local cache shutting down")
+	}
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
@@ -65,13 +69,12 @@ func (c *LocalCache[T]) Get(ctx context.Context, key T) (interface{}, bool, erro
 }
 
 // Set 向缓存中添加或更新数据
-func (c *LocalCache[T]) Set(ctx context.Context, key T, value *STData, ttl time.Duration) error {
+func (c *LocalCache[T]) Set(ctx context.Context, key T, value interface{}, ttl time.Duration) error {
+	if c.shutdown {
+		return errors.New("local cache shutting down")
+	}
 	c.lock.Lock()
 	defer c.lock.Unlock()
-
-	if c.shutdown {
-		return nil
-	}
 
 	// 如果已经存在，更新并移动到链表头部
 	if elem, found := c.data[key]; found {
@@ -95,6 +98,20 @@ func (c *LocalCache[T]) Set(ctx context.Context, key T, value *STData, ttl time.
 		newElem := c.lruList.PushFront(newItem)
 		c.data[key] = newElem
 	}
+	return nil
+}
+
+// Exists 判断缓存是否存在
+func (c *LocalCache[T]) Exists(ctx context.Context, key T) (bool, error) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	_, found := c.data[key]
+	return found, nil
+}
+
+// Delete 删除缓存元素
+func (c *LocalCache[T]) Delete(ctx context.Context, key T) error {
+	c.removeElement(c.data[key])
 	return nil
 }
 
@@ -135,14 +152,6 @@ func (c *LocalCache[T]) cleanupExpiredItems() {
 	}
 }
 
-// Exists 判断缓存是否存在
-func (c *LocalCache[T]) Exists(ctx context.Context, key T) (bool, error) {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
-	_, found := c.data[key]
-	return found, nil
-}
-
 // Stop 清理并停止定时器和清理协程
 func (c *LocalCache[T]) Stop() {
 	c.lock.Lock()
@@ -157,8 +166,4 @@ func (c *LocalCache[T]) Stop() {
 	close(c.stopChan)
 	// 等待清理协程退出
 	c.stopWG.Wait()
-}
-
-func (c *LocalCache[T]) Delete(ctx context.Context, key T) error {
-	return nil
 }

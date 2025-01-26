@@ -5,6 +5,8 @@ type MsgType int
 const (
 	SimpleMsg MsgType = iota
 	StorageUpdate
+	StorageDelete
+	StorageCreate
 )
 
 type MqMsg struct {
